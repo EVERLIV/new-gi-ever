@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import { useAuth } from '../contexts/AuthContext';
-import { LogoIcon } from '../components/icons/IconComponents';
 
 const LoginPage: React.FC = () => {
     const [email, setEmail] = useState('alex.doe@example.com');
@@ -41,7 +40,7 @@ const LoginPage: React.FC = () => {
             <div className="w-full max-w-md animate-scaleIn">
                 <div className="text-center mb-8">
                      <div className="flex items-center justify-center">
-                        <LogoIcon className="h-10 w-10 mr-3 text-primary" />
+                        <img src="https://www.everlivhealth.online/assets/logo_1756364617629-BwNFO1aW.png" alt="Everliv Health Logo" className="h-10 w-10 mr-3" />
                         <h1 className="text-4xl font-extrabold text-primary tracking-tight">EVERLIV</h1>
                     </div>
                     <p className="text-on-surface-variant mt-2">Get Your health in Order</p>

@@ -1,5 +1,7 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation, useParams, Link } from 'react-router-dom';
 import type { Biomarker, BiomarkerAlert, BloodTestRecord } from '../types';
 import Card from '../components/ui/Card';
@@ -148,7 +150,7 @@ const TestResultModal: React.FC<{ testRecord: BloodTestRecord; onClose: () => vo
         low: 'bg-blue-100 text-blue-800',
     };
 
-    return (
+    return createPortal(
          <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm z-40 flex items-center justify-center p-4 animate-fadeIn" role="dialog" aria-modal="true" onClick={onClose}>
           <div className="bg-surface rounded-2xl shadow-soft-lg w-full max-w-2xl m-4 transform animate-scaleIn" role="document" onClick={e => e.stopPropagation()}>
             <div className="p-6 border-b border-gray-200 flex justify-between items-center">
@@ -188,7 +190,8 @@ const TestResultModal: React.FC<{ testRecord: BloodTestRecord; onClose: () => vo
                  </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
     )
 }
 

@@ -11,7 +11,7 @@ const articles = [
     category: 'Nutrition',
     title: 'The Benefits of a Mediterranean Diet',
     summary: 'Discover why the Mediterranean diet is consistently ranked as one of the healthiest eating patterns for heart health and longevity.',
-    imageUrl: 'https://images.unsplash.com/photo-1540420773420-2350a43tery_789a4?q=80&w=2187&auto=format&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1522184216316-3c25379f9760?q=80&w=2070&auto=format&fit=crop',
     color: { text: 'text-card-blue-text' },
     author: 'Dr. Emily Carter',
     authorAvatar: 'https://randomuser.me/api/portraits/women/44.jpg',
@@ -32,7 +32,7 @@ const articles = [
     category: 'Fitness',
     title: 'High-Intensity Interval Training (HIIT) Explained',
     summary: 'Learn how short bursts of intense exercise followed by brief recovery periods can significantly boost your cardiovascular fitness.',
-    imageUrl: 'https://images.unsplash.com/photo-1517836357463-d25769a163de?q=80&w=2070&auto=format&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=2070&auto=format&fit=crop',
     color: { text: 'text-card-red-text' },
     author: 'Mark Johnson',
     authorAvatar: 'https://randomuser.me/api/portraits/men/32.jpg',
@@ -53,7 +53,7 @@ const articles = [
     category: 'Mental Wellness',
     title: 'Mindfulness and Meditation for Stress Reduction',
     summary: 'Explore simple techniques to practice mindfulness and meditation, which can help calm your mind and reduce daily stress.',
-    imageUrl: 'https://images.unsplash.com/photo-1506126613408-4e058603bd0e?q=80&w=2070&auto=format&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1506126613408-4e05860f5d58?q=80&w=2070&auto=format&fit=crop',
     color: { text: 'text-card-teal-text' },
     author: 'Aisha Khan',
     authorAvatar: 'https://randomuser.me/api/portraits/women/65.jpg',
@@ -74,7 +74,7 @@ const articles = [
     category: 'Longevity',
     title: 'The Science of Sleep: Why It Matters for a Long Life',
     summary: 'Understand the critical role that quality sleep plays in cellular repair, cognitive function, and overall long-term health.',
-    imageUrl: 'https://images.unsplash.com/photo-1495197399939-d6dd7983e302?q=80&w=1974&auto=format&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1444210971048-6a3006adbe44?q=80&w=2070&auto=format&fit=crop',
     color: { text: 'text-card-purple-text' },
     author: 'Dr. David Chen',
     authorAvatar: 'https://randomuser.me/api/portraits/men/75.jpg',
@@ -283,8 +283,8 @@ const ArticlesPage: React.FC = () => {
         <p className="text-on-surface-variant mt-1">Curated reads to inspire and inform your wellness journey.</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-12">
-        {articles.map((article, index) => (
-          <ArticleCard key={index} article={article} />
+        {articles.map((article) => (
+          <ArticleCard key={article.title} article={article} />
         ))}
       </div>
     </div>

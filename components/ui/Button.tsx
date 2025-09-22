@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -16,12 +15,15 @@ const Button: React.FC<ButtonProps> = ({
   className = '',
   ...props
 }) => {
-  const baseClasses = "inline-flex items-center justify-center px-5 py-2.5 border border-transparent text-sm font-semibold rounded-xl shadow-soft focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-soft-md";
+  // Removed `disabled:opacity-60` to apply more specific styles per variant.
+  const baseClasses = "inline-flex items-center justify-center px-5 py-2.5 border border-transparent text-sm font-semibold rounded-xl shadow-soft focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-soft-md";
   
+  // Added specific `disabled:` styles to each variant for better visual feedback.
+  // This prevents the button's content (like an icon) from becoming transparent.
   const variantClasses = {
-    primary: 'bg-gradient-to-br from-primary to-primary-light text-white focus:ring-primary',
-    secondary: 'bg-gray-100 text-on-surface-variant hover:bg-gray-200 focus:ring-gray-400 border-gray-200',
-    danger: 'bg-accent text-white hover:bg-accent-dark focus:ring-accent',
+    primary: 'bg-gradient-to-br from-primary to-primary-light text-white focus:ring-primary disabled:bg-primary/60 disabled:bg-gradient-none',
+    secondary: 'bg-gray-100 text-on-surface-variant hover:bg-gray-200 focus:ring-gray-400 border-gray-200 disabled:bg-gray-50 disabled:text-gray-400',
+    danger: 'bg-accent text-white hover:bg-accent-dark focus:ring-accent disabled:bg-accent/60',
   };
 
   return (

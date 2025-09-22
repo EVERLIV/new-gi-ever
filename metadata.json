@@ -1,5 +1,5 @@
 {
-  "name": "EVERLIV HEALTH - AI Health Companion",
+  "name": "EVERLIV HEALTH -  Get Your Health Order",
   "description": "A modern web application that provides AI-powered health insights. Users can analyze blood tests, monitor biomarkers, and chat with an AI health assistant for personalized recommendations and guidance on their wellness journey.",
   "requestFramePermissions": [
     "camera",

@@ -1,9 +1,23 @@
 // types.ts
 
+export interface HealthProfile {
+  age: number | '';
+  sex: 'male' | 'female' | 'other' | '';
+  height: number | ''; // in cm
+  weight: number | ''; // in kg
+  activityLevel: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active' | '';
+  healthGoals: string[];
+  dietaryPreferences: string;
+  chronicConditions: string;
+  allergies: string;
+  supplements: string;
+}
+
 export interface User {
   name: string;
   email: string;
   avatarUrl: string;
+  healthProfile?: HealthProfile;
 }
 
 export interface BloodTestRecord {

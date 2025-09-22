@@ -4,7 +4,7 @@ import { analyzeBloodTest, createChatWithContext, getBiomarkerRecommendations } 
 import type { ChatMessage, Biomarker, BloodTestAnalysis, BloodTestRecord, AIGeneratedRecommendations } from '../types';
 import { MessageSender } from '../types';
 import Button from '../components/ui/Button';
-import { PaperAirplaneIcon, UserCircleIcon, SparklesIcon, MicrophoneIcon, PaperClipIcon, XMarkIcon, StopCircleIcon } from '../components/icons/IconComponents';
+import { PaperAirplaneIcon, UserCircleIcon, SparklesIcon, MicrophoneIcon, PaperClipIcon, XMarkIcon, StopCircleIcon, MagnifyingGlassIcon } from '../components/icons/IconComponents';
 import { useAuth } from '../contexts/AuthContext';
 import type { Chat } from '@google/genai';
 
@@ -35,9 +35,26 @@ const fileToBase64 = (file: File): Promise<string> =>
     });
 
 
-const ChatMessageBubble: React.FC<{ message: ChatMessage }> = ({ message }) => {
+const ChatMessageBubble: React.FC<{ message: ChatMessage; searchQuery?: string }> = ({ message, searchQuery = '' }) => {
     const isUser = message.sender === MessageSender.USER;
     const isAiTyping = !isUser && message.text === '' && !message.image;
+    
+    const highlightText = (text: string, highlight: string): string => {
+        if (!highlight.trim()) {
+            return text.replace(/\n/g, '<br />');
+        }
+        try {
+            // Escape special regex characters from the user input
+            const escapedHighlight = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(`(${escapedHighlight})`, 'gi');
+            const highlightedText = text.replace(regex, `<mark class="bg-yellow-200 text-black rounded px-1">$1</mark>`);
+            return highlightedText.replace(/\n/g, '<br />');
+        } catch (e) {
+            console.error("Error creating regex for highlighting:", e);
+            // Fallback to no highlighting on regex error
+            return text.replace(/\n/g, '<br />');
+        }
+    };
 
     return (
         <div className={`flex items-start gap-3 w-full ${isUser ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
@@ -56,7 +73,7 @@ const ChatMessageBubble: React.FC<{ message: ChatMessage }> = ({ message }) => {
                  ) : (
                     <div className="p-3 px-4">
                         {message.image && <img src={message.image} alt="User upload" className="rounded-lg mb-2 max-w-xs" />}
-                        <div className="prose prose-sm max-w-none prose-p:my-2" dangerouslySetInnerHTML={{ __html: message.text.replace(/\n/g, '<br />') }} />
+                        <div className="prose prose-sm max-w-none prose-p:my-2" dangerouslySetInnerHTML={{ __html: highlightText(message.text, searchQuery) }} />
                     </div>
                  )}
             </div>
@@ -76,6 +93,7 @@ const AssistantPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [selectedImage, setSelectedImage] = useState<{ file: File, previewUrl: string } | null>(null);
     const [isRecording, setIsRecording] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
     
     const chatRef = useRef<Chat | null>(null);
     const recognitionRef = useRef<any>(null);
@@ -121,8 +139,10 @@ const AssistantPage: React.FC = () => {
 
     useEffect(() => {
         localStorage.setItem(CHAT_HISTORY_STORAGE_KEY, JSON.stringify(messages));
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
+        if (!searchQuery) {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [messages, searchQuery]);
 
     useEffect(() => {
         if (textareaRef.current) {
@@ -357,11 +377,53 @@ const AssistantPage: React.FC = () => {
         }
     };
 
+    const filteredMessages = searchQuery
+        ? messages.filter(msg =>
+            msg.text.toLowerCase().includes(searchQuery.toLowerCase())
+          )
+        : messages;
+
     return (
         <div className="flex flex-col h-full bg-transparent">
+            <div className="flex-shrink-0 p-3 sm:p-4 border-b border-gray-200/80 bg-background/80 backdrop-blur-sm">
+                <div className="relative">
+                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                        <MagnifyingGlassIcon className="h-5 w-5 text-on-surface-variant" aria-hidden="true" />
+                    </div>
+                    <input
+                        type="search"
+                        name="search"
+                        id="search"
+                        className="block w-full rounded-xl border-gray-300 pl-10 shadow-sm focus:border-primary focus:ring-primary sm:text-sm py-2 bg-surface"
+                        placeholder="Search chat history..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                    {searchQuery && (
+                        <button
+                            onClick={() => setSearchQuery('')}
+                            className="absolute inset-y-0 right-0 flex items-center pr-3"
+                            aria-label="Clear search"
+                        >
+                            <XMarkIcon className="h-5 w-5 text-on-surface-variant hover:text-on-surface" />
+                        </button>
+                    )}
+                </div>
+            </div>
+
             <div id="chat-container" className="flex-grow p-4 sm:p-6 overflow-y-auto">
                 <div className="space-y-6">
-                    {messages.map((msg, index) => <ChatMessageBubble key={index} message={msg} />)}
+                    {filteredMessages.length > 0 ? (
+                        filteredMessages.map((msg, index) => <ChatMessageBubble key={index} message={msg} searchQuery={searchQuery} />)
+                    ) : (
+                        searchQuery && (
+                            <div className="text-center py-10 text-on-surface-variant">
+                                <MagnifyingGlassIcon className="mx-auto h-12 w-12 opacity-50" />
+                                <p className="mt-4 font-semibold">No results found for "{searchQuery}"</p>
+                                <p className="text-sm">Try searching for a different term.</p>
+                            </div>
+                        )
+                    )}
                     <div ref={messagesEndRef} />
                 </div>
             </div>

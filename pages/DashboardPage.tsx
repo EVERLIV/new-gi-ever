@@ -1,48 +1,29 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getDailyHealthTip } from '../services/geminiService';
-import type { Biomarker } from '../types';
+import type { Biomarker, BloodTestRecord } from '../types';
 import {
-  MagnifyingGlassIcon,
-  BellIcon,
   SparklesIcon,
   DocumentTextIcon,
+  ExclamationTriangleIcon,
+  CheckCircleIcon,
   ChartBarIcon,
-  UserCircleIcon,
   BookOpenIcon,
+  ChevronRightIcon,
+  LightBulbIcon,
+  ClipboardDocumentListIcon,
 } from '../components/icons/IconComponents';
 
-const BIOMARKERS_STORAGE_KEY = 'everliv_health_biomarkers';
-const DAILY_TIP_STORAGE_KEY = 'everliv_health_daily_tip';
+const BIOMARKERS_STORAGE_key = 'everliv_health_biomarkers';
+const DAILY_TIP_STORAGE_key = 'everliv_health_daily_tip';
+const TEST_HISTORY_STORAGE_key = 'everliv_health_test_history';
 
-// --- Sub-components for the new Dashboard Design ---
+// --- Sub-components for the Dashboard Design ---
 
 const Skeleton: React.FC<{ className?: string }> = ({ className = '' }) => (
     <div className={`bg-gray-200 rounded-md animate-pulse ${className}`} />
 );
-
-interface NavCardProps {
-  title: string;
-  // Fix: Changed type from React.ReactNode to React.ReactElement for better type safety with React.cloneElement.
-  icon: React.ReactElement;
-  colorClasses: { bg: string; text: string };
-  link: string;
-}
-
-const NavCard: React.FC<NavCardProps> = ({ title, icon, colorClasses, link }) => (
-    <Link to={link} className="block group h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-soft-lg rounded-2xl">
-        <div className={`p-5 rounded-2xl h-full flex flex-col justify-between ${colorClasses.bg} bg-gradient-to-br from-white to-gray-50`}>
-            <div className={`p-3 rounded-xl bg-white/60 shadow-soft w-12 h-12 flex items-center justify-center`}>
-                {React.cloneElement(icon, { className: `h-7 w-7 ${colorClasses.text}` })}
-            </div>
-            <h3 className={`text-xl font-bold mt-4 ${colorClasses.text}`}>{title}</h3>
-        </div>
-    </Link>
-);
-
 
 const RecommendationCard: React.FC<{ tip: string }> = ({ tip }) => (
     <div className="bg-gradient-to-r from-primary/90 to-primary p-6 rounded-2xl shadow-soft-md text-white">
@@ -69,95 +50,274 @@ const RecommendationCardSkeleton: React.FC = () => (
     </div>
 );
 
+const LatestRecommendationsCard: React.FC<{ recommendations: string[] }> = ({ recommendations }) => (
+    <div className="bg-gradient-to-br from-card-blue-from to-card-blue-to rounded-2xl shadow-soft border border-blue-200/80 p-6 flex flex-col">
+        <div className="flex items-center">
+            <div className="flex-shrink-0 bg-white/70 rounded-full p-2 mr-4">
+                <ClipboardDocumentListIcon className="h-6 w-6 text-card-blue-text" />
+            </div>
+            <h3 className="font-bold text-card-blue-text text-lg">
+                Action Plan from Your Last Test
+            </h3>
+        </div>
+        <ul className="mt-4 space-y-3 flex-grow">
+            {recommendations.slice(0, 3).map((rec, index) => (
+                <li key={index} className="flex items-start">
+                    <CheckCircleIcon className="h-5 w-5 text-primary/80 mr-3 mt-0.5 flex-shrink-0" />
+                    <span className="text-on-surface-variant text-sm">{rec}</span>
+                </li>
+            ))}
+        </ul>
+        <div className="mt-auto text-center pt-4">
+            <Link to="/biomarkers" className="inline-flex items-center px-5 py-2 text-sm font-semibold text-primary bg-white/90 rounded-xl shadow-soft hover:bg-white transition-all transform hover:-translate-y-0.5 hover:shadow-soft-md">
+                View All Recommendations
+                <ChevronRightIcon className="w-4 h-4 ml-1.5" />
+            </Link>
+        </div>
+    </div>
+);
+
+
+const LatestRecommendationsCardSkeleton: React.FC = () => (
+    <div className="bg-gray-100 rounded-2xl shadow-soft p-6 flex flex-col">
+        <div className="flex items-center">
+            <Skeleton className="h-10 w-10 rounded-full mr-4" />
+            <Skeleton className="h-5 w-1/2" />
+        </div>
+        <div className="mt-4 space-y-4 flex-grow">
+            {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex items-start">
+                    <Skeleton className="h-5 w-5 rounded-full mr-3" />
+                    <Skeleton className="h-4 w-5/6" />
+                </div>
+            ))}
+        </div>
+        <div className="mt-auto pt-4 flex justify-center">
+            <Skeleton className="h-9 w-48 rounded-xl" />
+        </div>
+    </div>
+);
+
+
+
+const AttentionBiomarkers: React.FC<{ biomarkers: Biomarker[] }> = ({ biomarkers }) => {
+    const attentionBiomarkers = biomarkers.filter(b => b.status !== 'normal');
+    const statusPillColors = {
+        borderline: 'bg-yellow-100 text-yellow-800',
+        high: 'bg-red-100 text-red-800',
+        low: 'bg-blue-100 text-blue-800',
+        normal: ''
+    };
+
+    return (
+        <div className="bg-surface rounded-2xl shadow-soft border border-gray-200/60 p-6">
+            <h3 className="font-bold text-on-surface flex items-center">
+                <ExclamationTriangleIcon className="h-5 w-5 mr-2 text-yellow-500" />
+                Biomarkers Requiring Attention
+            </h3>
+            {attentionBiomarkers.length > 0 ? (
+                <ul className="mt-4 space-y-3">
+                    {attentionBiomarkers.map(marker => (
+                        <li key={marker.name}>
+                            <Link to={`/biomarkers/${encodeURIComponent(marker.name)}`} className="block p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                                <div className="flex justify-between items-center">
+                                    <span className="font-semibold">{marker.name}</span>
+                                    <span className={`px-2 py-0.5 text-xs font-medium rounded-full capitalize ${statusPillColors[marker.status]}`}>{marker.status}</span>
+                                </div>
+                                <p className="text-sm text-on-surface-variant">{marker.value} {marker.unit}</p>
+                            </Link>
+                        </li>
+                    ))}
+                </ul>
+            ) : (
+                <div className="mt-4 flex items-center p-4 rounded-lg bg-green-50/80 border border-green-200/80">
+                    <CheckCircleIcon className="h-8 w-8 text-green-500 mr-4 flex-shrink-0" />
+                    <div>
+                        <p className="font-semibold text-green-800">All Biomarkers Normal</p>
+                        <p className="text-sm text-green-700">Everything looks great. Keep up the good work!</p>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const AttentionBiomarkersSkeleton: React.FC = () => (
+    <div className="bg-surface rounded-2xl shadow-soft border border-gray-200/60 p-6">
+         <div className="flex items-center">
+            <Skeleton className="h-5 w-5 mr-2 rounded-full" />
+            <Skeleton className="h-4 w-48" />
+        </div>
+        <div className="mt-4 space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="p-3">
+                    <div className="flex justify-between items-center">
+                        <Skeleton className="h-4 w-2/5" />
+                        <Skeleton className="h-5 w-16" />
+                    </div>
+                    <Skeleton className="h-3 w-1/3 mt-1" />
+                </div>
+            ))}
+        </div>
+    </div>
+);
+
+const HealthChecklist: React.FC = () => {
+    const essentialTests = [
+        { name: 'Complete Blood Count (CBC)', description: 'Evaluates overall health and detects a wide range of disorders.' },
+        { name: 'Comprehensive Metabolic Panel (CMP)', description: 'Checks kidney/liver function, blood sugar, and electrolytes.' },
+        { name: 'Lipid Panel', description: 'Measures cholesterol and triglycerides for heart health.' },
+    ];
+    return (
+        <div className="bg-surface rounded-2xl shadow-soft border border-gray-200/60 p-6">
+            <h3 className="font-bold text-on-surface">Essential Health Checklist</h3>
+            <p className="text-sm text-on-surface-variant mt-1">Common tests to proactively monitor your health.</p>
+             <ul className="mt-4 space-y-2 divide-y divide-gray-200/80">
+                {essentialTests.map(test => (
+                    <li key={test.name} className="py-3 flex items-start justify-between">
+                        <div>
+                            <p className="font-semibold text-on-surface">{test.name}</p>
+                            <p className="text-sm text-on-surface-variant">{test.description}</p>
+                        </div>
+                        <Link to="/blood-test" className="ml-4 flex-shrink-0">
+                            <button className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+                                Add Results
+                            </button>
+                        </Link>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+};
+
+const HealthChecklistSkeleton: React.FC = () => (
+    <div className="bg-surface rounded-2xl shadow-soft border border-gray-200/60 p-6">
+        <Skeleton className="h-5 w-1/3 mb-1" />
+        <Skeleton className="h-3 w-3/4 mb-4" />
+        <div className="space-y-3 divide-y divide-gray-200/80">
+            {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="py-3 flex justify-between items-start">
+                    <div className="w-2/3 space-y-2">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-3 w-5/6" />
+                    </div>
+                    <Skeleton className="h-7 w-20 rounded-lg ml-4" />
+                </div>
+            ))}
+        </div>
+    </div>
+);
+
+const QuickStartCard: React.FC = () => {
+    const items = [
+        { name: 'AI Blood Analysis', description: 'Upload a new report', href: '/blood-test', icon: DocumentTextIcon, color: 'bg-card-blue-from text-card-blue-text' },
+        { name: 'AI Assistant', description: 'Chat for health advice', href: '/assistant', icon: SparklesIcon, color: 'bg-card-purple-from text-card-purple-text' },
+        { name: 'View Biomarkers', description: 'Track your history', href: '/biomarkers', icon: ChartBarIcon, color: 'bg-card-teal-from text-card-teal-text' },
+        { name: 'Read Articles', description: 'Explore wellness topics', href: '/articles', icon: BookOpenIcon, color: 'bg-card-orange-from text-card-orange-text' },
+    ];
+
+    return (
+        <div className="bg-surface rounded-2xl shadow-soft border border-gray-200/60 p-6">
+            <h3 className="font-bold text-on-surface">Quick Start</h3>
+            <div className="mt-4 space-y-3">
+                {items.map(item => (
+                    <Link key={item.name} to={item.href} className="flex items-center p-3 rounded-lg hover:bg-gray-50 transition-colors group">
+                        <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${item.color}`}>
+                            <item.icon className="w-6 h-6" />
+                        </div>
+                        <div className="ml-4 flex-grow">
+                            <p className="font-semibold text-on-surface">{item.name}</p>
+                            <p className="text-sm text-on-surface-variant">{item.description}</p>
+                        </div>
+                        <ChevronRightIcon className="w-5 h-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
+                    </Link>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+const QuickStartCardSkeleton: React.FC = () => (
+    <div className="bg-surface rounded-2xl shadow-soft border border-gray-200/60 p-6">
+        <Skeleton className="h-5 w-1/3 mb-4" />
+        <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center p-3">
+                    <Skeleton className="h-10 w-10 rounded-lg" />
+                    <div className="ml-4 flex-grow space-y-2">
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-3 w-1/2" />
+                    </div>
+                </div>
+            ))}
+        </div>
+    </div>
+);
 
 const DashboardPage: React.FC = () => {
     const { user } = useAuth();
     const [allBiomarkers, setAllBiomarkers] = useState<Biomarker[]>([]);
     const [dailyTip, setDailyTip] = useState<string>('');
-    const [isTipLoading, setIsTipLoading] = useState(true);
+    const [latestRecommendations, setLatestRecommendations] = useState<string[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        try {
-            const storedBiomarkersJSON = window.localStorage.getItem(BIOMARKERS_STORAGE_KEY);
-            if (storedBiomarkersJSON) {
-                const biomarkers: Biomarker[] = JSON.parse(storedBiomarkersJSON);
-                setAllBiomarkers(biomarkers);
-            }
-        } catch (error) {
-            console.error("Error loading biomarkers from localStorage:", error);
-        }
-    }, []);
-
-    useEffect(() => {
-        const fetchTip = async () => {
-            setIsTipLoading(true);
-            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-
+        const loadDashboardData = async () => {
+            setIsLoading(true);
+            let biomarkers: Biomarker[] = [];
             try {
-                const storedTip = window.localStorage.getItem(DAILY_TIP_STORAGE_KEY);
+                // Load biomarkers
+                const storedBiomarkersJSON = window.localStorage.getItem(BIOMARKERS_STORAGE_key);
+                if (storedBiomarkersJSON) {
+                    biomarkers = JSON.parse(storedBiomarkersJSON);
+                    setAllBiomarkers(biomarkers);
+                }
+
+                // Load test history to get latest recommendations
+                const storedTestHistoryJSON = window.localStorage.getItem(TEST_HISTORY_STORAGE_key);
+                if (storedTestHistoryJSON) {
+                    const testHistory: BloodTestRecord[] = JSON.parse(storedTestHistoryJSON);
+                    if (testHistory.length > 0) {
+                        const lastTest = testHistory[testHistory.length - 1];
+                        if (lastTest.analysis && lastTest.analysis.recommendations) {
+                            setLatestRecommendations(lastTest.analysis.recommendations);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("Error loading data from localStorage:", error);
+            }
+
+            const today = new Date().toISOString().split('T')[0];
+            let tip = '';
+            try {
+                const storedTip = window.localStorage.getItem(DAILY_TIP_STORAGE_key);
                 if (storedTip) {
                     const cachedTipData = JSON.parse(storedTip);
-                    // Use cached tip if it's from today
                     if (cachedTipData && cachedTipData.date === today) {
-                        setDailyTip(cachedTipData.tip);
-                        setIsTipLoading(false);
-                        return;
+                        tip = cachedTipData.tip;
                     }
                 }
             } catch (error) {
                 console.error("Error reading cached daily tip:", error);
             }
 
-            // If no valid cached tip, fetch a new one
-            const userGoals = ['Improve heart health', 'Maintain a healthy weight'];
-            // The service function handles its own errors and returns a fallback tip
-            const tip = await getDailyHealthTip(userGoals, allBiomarkers);
+            if (!tip) {
+                tip = await getDailyHealthTip(user, biomarkers);
+                window.localStorage.setItem(DAILY_TIP_STORAGE_key, JSON.stringify({ tip, date: today }));
+            }
             
             setDailyTip(tip);
-            // Save the new tip to localStorage for today
-            window.localStorage.setItem(DAILY_TIP_STORAGE_KEY, JSON.stringify({ tip, date: today }));
-            setIsTipLoading(false);
+            setIsLoading(false);
         };
 
-        fetchTip();
-    }, [allBiomarkers]);
+        loadDashboardData();
+    }, [user]);
     
-    const mainNavItems = [
-        {
-            title: 'AI Blood Analysis',
-            link: '/blood-test',
-            icon: <DocumentTextIcon />,
-            colors: { bg: 'bg-card-red-light', text: 'text-card-red-text' }
-        },
-        {
-            title: 'AI Assistant',
-            link: '/assistant',
-            icon: <SparklesIcon />,
-            colors: { bg: 'bg-card-blue-light', text: 'text-card-blue-text' }
-        },
-        {
-            title: 'Biomarkers',
-            link: '/biomarkers',
-            icon: <ChartBarIcon />,
-            colors: { bg: 'bg-card-teal-light', text: 'text-primary' }
-        },
-        {
-            title: 'Articles',
-            link: '/articles',
-            icon: <BookOpenIcon />,
-            colors: { bg: 'bg-card-purple-light', text: 'text-card-purple-text' }
-        },
-        {
-            title: 'Profile',
-            link: '/profile',
-            icon: <UserCircleIcon />,
-            colors: { bg: 'bg-card-orange-light', text: 'text-card-orange-text' }
-        },
-    ];
 
     return (
-        <div className="space-y-8 animate-fadeIn pb-10">
-            {/* Header */}
+        <div className="max-w-7xl mx-auto space-y-8 animate-fadeIn pb-10">
             <header>
                 <div className="flex items-center gap-3">
                     <img src={user.avatarUrl} alt="User Avatar" className="w-14 h-14 rounded-full shadow-soft-md border-2 border-white" />
@@ -168,33 +328,22 @@ const DashboardPage: React.FC = () => {
                 </div>
             </header>
 
-            {/* Main Content Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                 {mainNavItems.slice(0, 3).map(item => (
-                    <NavCard
-                        key={item.title}
-                        title={item.title}
-                        icon={item.icon}
-                        colorClasses={item.colors}
-                        link={item.link}
-                    />
-                ))}
+            {isLoading ? <RecommendationCardSkeleton /> : <RecommendationCard tip={dailyTip} />}
+            
+            <div className="space-y-6 lg:space-y-0 lg:grid lg:grid-cols-3 lg:gap-6">
+                <div className="lg:col-span-2 space-y-6">
+                    {isLoading ? (
+                        latestRecommendations.length > 0 && <LatestRecommendationsCardSkeleton />
+                    ) : (
+                        latestRecommendations.length > 0 && <LatestRecommendationsCard recommendations={latestRecommendations} />
+                    )}
+                    {isLoading ? <AttentionBiomarkersSkeleton /> : <AttentionBiomarkers biomarkers={allBiomarkers} />}
+                </div>
+                <div className="lg:col-span-1 space-y-6">
+                     {isLoading ? <QuickStartCardSkeleton /> : <QuickStartCard />}
+                     {isLoading ? <HealthChecklistSkeleton /> : <HealthChecklist />}
+                </div>
             </div>
-
-            {isTipLoading ? <RecommendationCardSkeleton /> : <RecommendationCard tip={dailyTip} />}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {mainNavItems.slice(3).map(item => (
-                    <NavCard
-                        key={item.title}
-                        title={item.title}
-                        icon={item.icon}
-                        colorClasses={item.colors}
-                        link={item.link}
-                    />
-                ))}
-            </div>
-             
         </div>
     );
 };

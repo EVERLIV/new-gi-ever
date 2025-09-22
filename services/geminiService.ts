@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type, Chat } from "@google/genai";
 import type { BloodTestAnalysis, Biomarker, AIGeneratedRecommendations, User } from '../types';
 
@@ -163,6 +162,31 @@ export const getBiomarkerRecommendations = async (biomarker: { name: string, val
 export const createChatWithContext = (user: User, biomarkers: Biomarker[]): Chat => {
     let context = `--- Start of User Health Profile ---\n`;
     context += `User Name: ${user.name}\n`;
+    
+    if (user.healthProfile) {
+        const profile = user.healthProfile;
+        if(profile.age) context += `Age: ${profile.age}\n`;
+        if(profile.sex) context += `Sex: ${profile.sex}\n`;
+        if(profile.height) context += `Height: ${profile.height} cm\n`;
+        if(profile.weight) context += `Weight: ${profile.weight} kg\n`;
+        if(profile.activityLevel) context += `Activity Level: ${profile.activityLevel}\n`;
+        if (profile.healthGoals && profile.healthGoals.length > 0) {
+            context += `Health Goals: ${profile.healthGoals.join(', ')}\n`;
+        }
+        if (profile.dietaryPreferences) {
+            context += `Dietary Preferences: ${profile.dietaryPreferences}\n`;
+        }
+        if (profile.chronicConditions) {
+            context += `Known Conditions: ${profile.chronicConditions}\n`;
+        }
+        if (profile.allergies) {
+            context += `Allergies: ${profile.allergies}\n`;
+        }
+        if (profile.supplements) {
+            context += `Current Supplements: ${profile.supplements}\n`;
+        }
+    }
+
 
     if (biomarkers.length > 0) {
         context += "\nRecent Biomarker Data:\n";
@@ -202,12 +226,22 @@ export const createChatWithContext = (user: User, biomarkers: Biomarker[]): Chat
     });
 };
 
-export const getDailyHealthTip = async (userGoals: string[], biomarkers: Biomarker[]): Promise<string> => {
+export const getDailyHealthTip = async (user: User, biomarkers: Biomarker[]): Promise<string> => {
     const relevantBiomarkers = biomarkers.filter(b => b.status !== 'normal').map(b => `- ${b.name}: ${b.value} ${b.unit} (Status: ${b.status})`).join('\n');
+    
+    const userGoals = user.healthProfile?.healthGoals || [];
+    const healthProfileContext = user.healthProfile ? `
+        The user is a ${user.healthProfile.age}-year-old ${user.healthProfile.sex}.
+        Their activity level is ${user.healthProfile.activityLevel}.
+        They have the following known conditions: ${user.healthProfile.chronicConditions || 'None reported'}.
+        They have the following allergies: ${user.healthProfile.allergies || 'None reported'}.
+        They are currently taking the following supplements: ${user.healthProfile.supplements || 'None reported'}.
+    ` : '';
 
     const prompt = `
         You are an AI health and wellness coach for the EVERLIV HEALTH app.
         A user has the following goals: ${userGoals.join(', ')}.
+        ${healthProfileContext}
         Their current biomarkers that are not in the normal range are:
         ${relevantBiomarkers.length > 0 ? relevantBiomarkers : 'All biomarkers are currently in the normal range.'}
 
