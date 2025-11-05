@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import HealthProfileForm from '../components/forms/HealthProfileForm';
 import type { HealthProfile } from '../types';
 
 const HealthProfileSetupPage: React.FC = () => {
     const { user, updateHealthProfile } = useAuth();
+    const [isSubmitting, setIsSubmitting] = useState(false);
     
     const initialProfileData: HealthProfile = {
         age: '',
@@ -19,10 +20,18 @@ const HealthProfileSetupPage: React.FC = () => {
         supplements: '',
     };
 
-    const handleSubmit = (data: HealthProfile) => {
-        updateHealthProfile(data);
-        // The App.tsx component will automatically navigate the user away from this page
-        // once the profile is updated in the context.
+    const handleSubmit = async (data: HealthProfile) => {
+        setIsSubmitting(true);
+        try {
+            await updateHealthProfile(data);
+            // The App.tsx component will automatically navigate the user away from this page
+            // once the profile is updated in the context.
+        } catch (error) {
+            console.error("Failed to submit health profile:", error);
+            // Optionally, show an error message to the user
+            alert("Could not save your profile. Please try again.");
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -47,7 +56,8 @@ const HealthProfileSetupPage: React.FC = () => {
                        <HealthProfileForm 
                             initialData={initialProfileData}
                             onSubmit={handleSubmit}
-                            submitButtonText="Complete Profile & Continue"
+                            submitButtonText={isSubmitting ? "Saving..." : "Complete Profile & Continue"}
+                            isSubmitting={isSubmitting}
                        />
                     </div>
                 </div>

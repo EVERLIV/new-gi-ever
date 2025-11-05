@@ -1,13 +1,11 @@
 
 import React, { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import type { BloodTestAnalysis, Biomarker, BloodTestRecord, AIGeneratedRecommendations } from '../types';
-import { analyzeBloodTest, getBiomarkerRecommendations } from '../services/geminiService';
+import type { BloodTestAnalysis } from '../types';
+import { analyzeBloodTest } from '../services/geminiService';
+import { apiService } from '../services/apiService';
 import Button from '../components/ui/Button';
 import { DocumentArrowUpIcon, LightBulbIcon, CheckCircleIcon, ExclamationTriangleIcon, SparklesIcon, TrashIcon, PlusCircleIcon, ChartBarIcon } from '../components/icons/IconComponents';
-
-const BIOMARKERS_STORAGE_KEY = 'everliv_health_biomarkers';
-const TEST_HISTORY_STORAGE_KEY = 'everliv_health_test_history';
 
 const FileUploader: React.FC<{ onFileSelect: (file: File) => void; selectedFile: File | null; disabled: boolean }> = ({ onFileSelect, selectedFile, disabled }) => (
     <div className="mt-6">
@@ -126,86 +124,12 @@ const BloodTestPage: React.FC = () => {
       setError(null);
 
       try {
-          const currentDate = new Date();
-          const currentDateISO = currentDate.toISOString();
-
-          // Create a new test record for history
-          const newTestRecord: BloodTestRecord = {
-              id: `test-${currentDate.getTime()}`,
-              date: currentDateISO,
-              analysis: analysis,
-          };
-
-          // Save the new test record to the test history
-          const storedTestHistory = localStorage.getItem(TEST_HISTORY_STORAGE_KEY);
-          const allTestHistory: BloodTestRecord[] = storedTestHistory ? JSON.parse(storedTestHistory) : [];
-          allTestHistory.push(newTestRecord);
-          localStorage.setItem(TEST_HISTORY_STORAGE_KEY, JSON.stringify(allTestHistory));
-
-          // Load existing biomarkers to update them
-          const storedBiomarkers = localStorage.getItem(BIOMARKERS_STORAGE_KEY);
-          let allBiomarkers: Biomarker[] = storedBiomarkers ? JSON.parse(storedBiomarkers) : [];
-
-          // Generate recommendations sequentially to avoid rate-limiting issues
-          const recommendations: AIGeneratedRecommendations[] = [];
-          for (const marker of analysis.biomarkers) {
-            const rec = await getBiomarkerRecommendations({
-              name: marker.name,
-              value: marker.value,
-              unit: marker.unit,
-              status: marker.status,
-            });
-            recommendations.push(rec);
-          }
-
-          analysis.biomarkers.forEach((resultMarker, index) => {
-              const newValue = parseFloat(resultMarker.value);
-              if (isNaN(newValue)) return;
-
-              const newHistoryEntry = {
-                  value: newValue,
-                  date: currentDateISO,
-                  sourceTestId: newTestRecord.id
-              };
-
-              const existingIndex = allBiomarkers.findIndex(b => b.name.toLowerCase() === resultMarker.name.toLowerCase());
-              
-              if (existingIndex > -1) {
-                  // Update existing biomarker
-                  const existing = allBiomarkers[existingIndex];
-                  const lastValue = existing.history.length > 0 ? existing.history[existing.history.length - 1].value : newValue;
-                  
-                  existing.value = resultMarker.value;
-                  existing.unit = resultMarker.unit;
-                  existing.status = resultMarker.status;
-                  existing.range = resultMarker.range;
-                  existing.description = resultMarker.explanation;
-                  existing.lastUpdated = currentDateISO;
-                  existing.trend = newValue > lastValue ? 'up' : newValue < lastValue ? 'down' : 'stable';
-                  existing.history.push(newHistoryEntry);
-                  existing.recommendations = recommendations[index];
-              } else {
-                  // Create new biomarker
-                  allBiomarkers.push({
-                      name: resultMarker.name,
-                      value: resultMarker.value,
-                      unit: resultMarker.unit,
-                      status: resultMarker.status,
-                      range: resultMarker.range,
-                      description: resultMarker.explanation,
-                      trend: 'stable',
-                      lastUpdated: currentDateISO,
-                      history: [newHistoryEntry],
-                      recommendations: recommendations[index],
-                  });
-              }
-          });
-          
-          localStorage.setItem(BIOMARKERS_STORAGE_KEY, JSON.stringify(allBiomarkers));
+          await apiService.saveTestResult(analysis);
           setIsSaved(true);
       } catch (e) {
           console.error("Failed to save biomarkers:", e);
-          setError("Could not save biomarker data or generate AI tips. Please check console for details.");
+          const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
+          setError(`Could not save results: ${errorMessage}`);
       } finally {
         setIsSaving(false);
       }

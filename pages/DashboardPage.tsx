@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getDailyHealthTip } from '../services/geminiService';
 import type { Biomarker, BloodTestRecord } from '../types';
+import { apiService } from '../services/apiService';
 import {
   SparklesIcon,
   DocumentTextIcon,
@@ -14,12 +15,6 @@ import {
   LightBulbIcon,
   ClipboardDocumentListIcon,
 } from '../components/icons/IconComponents';
-
-const BIOMARKERS_STORAGE_key = 'everliv_health_biomarkers';
-const DAILY_TIP_STORAGE_key = 'everliv_health_daily_tip';
-const TEST_HISTORY_STORAGE_key = 'everliv_health_test_history';
-
-// --- Sub-components for the Dashboard Design ---
 
 const Skeleton: React.FC<{ className?: string }> = ({ className = '' }) => (
     <div className={`bg-gray-200 rounded-md animate-pulse ${className}`} />
@@ -265,51 +260,49 @@ const DashboardPage: React.FC = () => {
     useEffect(() => {
         const loadDashboardData = async () => {
             setIsLoading(true);
-            let biomarkers: Biomarker[] = [];
             try {
-                // Load biomarkers
-                const storedBiomarkersJSON = window.localStorage.getItem(BIOMARKERS_STORAGE_key);
-                if (storedBiomarkersJSON) {
-                    biomarkers = JSON.parse(storedBiomarkersJSON);
-                    setAllBiomarkers(biomarkers);
+                const [biomarkers, testHistory] = await Promise.all([
+                    apiService.getBiomarkers(),
+                    apiService.getTestHistory()
+                ]);
+                
+                setAllBiomarkers(biomarkers);
+
+                if (testHistory.length > 0) {
+                    const lastTest = testHistory[testHistory.length - 1];
+                    if (lastTest.analysis && lastTest.analysis.recommendations) {
+                        setLatestRecommendations(lastTest.analysis.recommendations);
+                    }
                 }
 
-                // Load test history to get latest recommendations
-                const storedTestHistoryJSON = window.localStorage.getItem(TEST_HISTORY_STORAGE_key);
-                if (storedTestHistoryJSON) {
-                    const testHistory: BloodTestRecord[] = JSON.parse(storedTestHistoryJSON);
-                    if (testHistory.length > 0) {
-                        const lastTest = testHistory[testHistory.length - 1];
-                        if (lastTest.analysis && lastTest.analysis.recommendations) {
-                            setLatestRecommendations(lastTest.analysis.recommendations);
+                // For the daily tip, we can continue to use a simple cache to avoid calling Gemini API on every load
+                const today = new Date().toISOString().split('T')[0];
+                const DAILY_TIP_STORAGE_KEY = 'everliv_health_daily_tip';
+                let tip = '';
+                try {
+                    const storedTip = window.localStorage.getItem(DAILY_TIP_STORAGE_KEY);
+                    if (storedTip) {
+                        const cachedTipData = JSON.parse(storedTip);
+                        if (cachedTipData && cachedTipData.date === today) {
+                            tip = cachedTipData.tip;
                         }
                     }
+                } catch (error) {
+                    console.error("Error reading cached daily tip:", error);
                 }
-            } catch (error) {
-                console.error("Error loading data from localStorage:", error);
-            }
-
-            const today = new Date().toISOString().split('T')[0];
-            let tip = '';
-            try {
-                const storedTip = window.localStorage.getItem(DAILY_TIP_STORAGE_key);
-                if (storedTip) {
-                    const cachedTipData = JSON.parse(storedTip);
-                    if (cachedTipData && cachedTipData.date === today) {
-                        tip = cachedTipData.tip;
-                    }
+                
+                if (!tip) {
+                    tip = await getDailyHealthTip(user, biomarkers);
+                    window.localStorage.setItem(DAILY_TIP_STORAGE_KEY, JSON.stringify({ tip, date: today }));
                 }
-            } catch (error) {
-                console.error("Error reading cached daily tip:", error);
-            }
+                setDailyTip(tip);
 
-            if (!tip) {
-                tip = await getDailyHealthTip(user, biomarkers);
-                window.localStorage.setItem(DAILY_TIP_STORAGE_key, JSON.stringify({ tip, date: today }));
+            } catch (error) {
+                console.error("Error loading dashboard data:", error);
+                // Handle error state in UI if necessary
+            } finally {
+                setIsLoading(false);
             }
-            
-            setDailyTip(tip);
-            setIsLoading(false);
         };
 
         loadDashboardData();
@@ -333,7 +326,7 @@ const DashboardPage: React.FC = () => {
             <div className="space-y-6 lg:space-y-0 lg:grid lg:grid-cols-3 lg:gap-6">
                 <div className="lg:col-span-2 space-y-6">
                     {isLoading ? (
-                        latestRecommendations.length > 0 && <LatestRecommendationsCardSkeleton />
+                         <LatestRecommendationsCardSkeleton />
                     ) : (
                         latestRecommendations.length > 0 && <LatestRecommendationsCard recommendations={latestRecommendations} />
                     )}

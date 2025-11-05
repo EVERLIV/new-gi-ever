@@ -8,6 +8,7 @@ interface HealthProfileFormProps {
     submitButtonText: string;
     onCancel?: () => void;
     isModalVersion?: boolean;
+    isSubmitting?: boolean;
 }
 
 const steps = [
@@ -59,7 +60,7 @@ const ProgressBar: React.FC<{ currentStep: number }> = ({ currentStep }) => {
 };
 
 
-const HealthProfileForm: React.FC<HealthProfileFormProps> = ({ initialData, onSubmit, submitButtonText, onCancel, isModalVersion = false }) => {
+const HealthProfileForm: React.FC<HealthProfileFormProps> = ({ initialData, onSubmit, submitButtonText, onCancel, isModalVersion = false, isSubmitting = false }) => {
     const [currentStep, setCurrentStep] = useState(1);
     const [formData, setFormData] = useState<HealthProfile>(initialData);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -261,16 +262,16 @@ const HealthProfileForm: React.FC<HealthProfileFormProps> = ({ initialData, onSu
             
             <div className={`pt-5 flex ${currentStep > 1 || onCancel ? 'justify-between' : 'justify-end'} items-center`}>
                 {currentStep > 1 && (
-                    <Button type="button" onClick={handleBack} variant="secondary">Back</Button>
+                    <Button type="button" onClick={handleBack} variant="secondary" disabled={isSubmitting}>Back</Button>
                 )}
                 {onCancel && currentStep === 1 && (
-                     <Button type="button" onClick={onCancel} variant="secondary">Cancel</Button>
+                     <Button type="button" onClick={onCancel} variant="secondary" disabled={isSubmitting}>Cancel</Button>
                 )}
 
                 {currentStep < steps.length ? (
-                    <Button type="button" onClick={handleNext}>Next</Button>
+                    <Button type="button" onClick={handleNext} disabled={isSubmitting}>Next</Button>
                 ) : (
-                    <Button type="submit">{submitButtonText}</Button>
+                    <Button type="submit" isLoading={isSubmitting}>{submitButtonText}</Button>
                 )}
             </div>
         </form>

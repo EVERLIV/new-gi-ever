@@ -15,24 +15,23 @@ const LoginPage: React.FC = () => {
     
     const from = location.state?.from?.pathname || "/";
 
-    const handleSubmit = (event: React.FormEvent) => {
+    const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
         setIsLoading(true);
         setError('');
 
-        // Simulate API call
-        setTimeout(() => {
-            // In a real app, you would validate credentials against a backend.
-            // Here, we just check if the fields are not empty for demo purposes.
+        try {
             if (email && password) {
-                auth.login(email, password);
-                // Send them back to the page they tried to visit before being redirected to login
+                await auth.login(email, password);
                 navigate(from, { replace: true });
             } else {
                 setError('Please enter both email and password.');
             }
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'An unknown error occurred during login.');
+        } finally {
             setIsLoading(false);
-        }, 1000);
+        }
     };
 
     return (

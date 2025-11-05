@@ -4,13 +4,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, useParams, Link } from 'react-router-dom';
 import type { Biomarker, BiomarkerAlert, BloodTestRecord } from '../types';
+import { apiService } from '../services/apiService';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { ArrowTrendingUpIcon, ArrowTrendingDownIcon, MinusIcon, ChevronDownIcon, BellIcon, SparklesIcon, XMarkIcon, MagnifyingGlassIcon, ClockIcon, LightBulbIcon, ClipboardDocumentListIcon, BoltIcon, CubeIcon, CalendarDaysIcon, DocumentTextIcon } from '../components/icons/IconComponents';
-
-const BIOMARKERS_STORAGE_KEY = 'everliv_health_biomarkers';
-const ALERTS_STORAGE_KEY = 'everliv_health_alerts';
-const TEST_HISTORY_STORAGE_KEY = 'everliv_health_test_history';
 
 const Skeleton: React.FC<{ className?: string }> = ({ className = '' }) => (
     <div className={`bg-gray-200 rounded-md animate-pulse ${className}`} />
@@ -212,12 +209,13 @@ const BiomarkerDetailView: React.FC<{
     biomarker: Biomarker;
     setTooltip: (tooltip: { visible: boolean; x: number; y: number; content: string } | null) => void;
     alertConfig: BiomarkerAlert;
-    onSaveAlert: (alert: BiomarkerAlert) => void;
+    onSaveAlert: (alert: BiomarkerAlert) => Promise<void>;
     isTriggered: boolean;
     onViewTest: (testId: string) => void;
 }> = ({ biomarker, setTooltip, alertConfig, onSaveAlert, isTriggered, onViewTest }) => {
     
     const [localAlert, setLocalAlert] = useState<BiomarkerAlert>(alertConfig);
+    const [isSavingAlert, setIsSavingAlert] = useState(false);
 
     useEffect(() => {
         setLocalAlert(alertConfig);
@@ -227,8 +225,16 @@ const BiomarkerDetailView: React.FC<{
         setLocalAlert(prev => ({...prev, [field]: value}));
     };
 
-    const handleAlertSave = () => {
-        onSaveAlert(localAlert);
+    const handleAlertSave = async () => {
+        setIsSavingAlert(true);
+        try {
+            await onSaveAlert(localAlert);
+        } catch (error) {
+            console.error("Failed to save alert:", error);
+            // Optionally show an error message to the user
+        } finally {
+            setIsSavingAlert(false);
+        }
     };
 
     const statusPillColors = {
@@ -307,7 +313,7 @@ const BiomarkerDetailView: React.FC<{
                             
                             {JSON.stringify(localAlert) !== JSON.stringify(alertConfig) && (
                                 <div className="mt-4 flex justify-end">
-                                    <Button onClick={handleAlertSave} className="px-4 py-2 text-sm">Save Alert Changes</Button>
+                                    <Button onClick={handleAlertSave} isLoading={isSavingAlert} className="px-4 py-2 text-sm">Save Alert Changes</Button>
                                 </div>
                             )}
                         </div>
@@ -465,36 +471,21 @@ const BiomarkersPage: React.FC = () => {
   const location = useLocation();
   
   useEffect(() => {
-    const loadData = () => {
+    const loadData = async () => {
         setIsLoading(true);
         try {
-            // Load Biomarkers
-            const storedBiomarkersJSON = window.localStorage.getItem(BIOMARKERS_STORAGE_KEY);
-            const finalBiomarkers: Biomarker[] = storedBiomarkersJSON ? JSON.parse(storedBiomarkersJSON) : [];
-            setBiomarkers(finalBiomarkers);
+            const [biomarkersData, alertsData, testHistoryData] = await Promise.all([
+                apiService.getBiomarkers(),
+                apiService.getAlerts(),
+                apiService.getTestHistory()
+            ]);
 
-            // Load Test History
-            const storedTestHistoryJSON = window.localStorage.getItem(TEST_HISTORY_STORAGE_KEY);
-            const finalTestHistory: BloodTestRecord[] = storedTestHistoryJSON ? JSON.parse(storedTestHistoryJSON) : [];
-            setTestHistory(finalTestHistory);
-
-            // Load Alerts
-            const storedAlertsJSON = window.localStorage.getItem(ALERTS_STORAGE_KEY);
-            const existingAlerts: BiomarkerAlert[] = storedAlertsJSON ? JSON.parse(storedAlertsJSON) : [];
-            
-            // Ensure alerts are created for any new biomarkers
-            const allAlerts = finalBiomarkers.map(biomarker => {
-                const found = existingAlerts.find(alert => alert.biomarkerName === biomarker.name);
-                return found || { biomarkerName: biomarker.name, enabled: false };
-            });
-            setAlerts(allAlerts);
-
+            setBiomarkers(biomarkersData);
+            setAlerts(alertsData);
+            setTestHistory(testHistoryData);
         } catch (error) {
-            console.error("Error reading data from localStorage.", error);
-            // On error, start with a clean state for a production environment
-            setBiomarkers([]);
-            setTestHistory([]);
-            setAlerts([]);
+            console.error("Error loading biomarker page data:", error);
+            // Handle UI error state
         } finally {
             setIsLoading(false);
         }
@@ -503,10 +494,10 @@ const BiomarkersPage: React.FC = () => {
     loadData();
   }, [location.key]);
 
-  const handleSaveAlert = (updatedAlert: BiomarkerAlert) => {
+  const handleSaveAlert = async (updatedAlert: BiomarkerAlert) => {
       const newAlerts = alerts.map(a => a.biomarkerName === updatedAlert.biomarkerName ? updatedAlert : a);
+      await apiService.saveAlerts(newAlerts);
       setAlerts(newAlerts);
-      localStorage.setItem(ALERTS_STORAGE_KEY, JSON.stringify(newAlerts));
   };
 
   const filteredAndSortedBiomarkers = useMemo(() => {

@@ -1,10 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { apiService } from '../services/apiService';
 import { HeartIcon, ArrowUpTrayIcon } from '../components/icons/IconComponents';
 import { HeartIconSolid } from '../components/icons/IconComponents';
-
-const LIKES_STORAGE_KEY = 'everliv_health_article_likes';
 
 const articles = [
   {
@@ -149,28 +148,35 @@ const ArticleCard: React.FC<{ article: typeof articles[0] }> = ({ article }) => 
 
 const ArticleDetailView: React.FC<{ article: typeof articles[0] }> = ({ article }) => {
     const [isLiked, setIsLiked] = useState(false);
+    const [likedArticles, setLikedArticles] = useState<string[]>([]);
     const [showCopyMessage, setShowCopyMessage] = useState(false);
 
     useEffect(() => {
-        try {
-            const likedArticles = JSON.parse(localStorage.getItem(LIKES_STORAGE_KEY) || '[]');
-            setIsLiked(likedArticles.includes(article.title));
-        } catch (e) {
-            console.error("Failed to parse liked articles from localStorage", e);
-            setIsLiked(false);
-        }
+        const fetchLikes = async () => {
+            try {
+                const likes = await apiService.getArticleLikes();
+                setLikedArticles(likes);
+                setIsLiked(likes.includes(article.title));
+            } catch (e) {
+                console.error("Failed to fetch liked articles", e);
+                setIsLiked(false);
+            }
+        };
+        fetchLikes();
     }, [article.title]);
 
-    const handleToggleLike = () => {
+    const handleToggleLike = async () => {
         try {
-            const likedArticles = JSON.parse(localStorage.getItem(LIKES_STORAGE_KEY) || '[]');
-            const newLikedArticles = isLiked
-                ? likedArticles.filter((t: string) => t !== article.title)
-                : [...likedArticles, article.title];
-            localStorage.setItem(LIKES_STORAGE_KEY, JSON.stringify(newLikedArticles));
-            setIsLiked(!isLiked);
+            const newLikedState = !isLiked;
+            const newLikedArticles = newLikedState
+                ? [...likedArticles, article.title]
+                : likedArticles.filter((t: string) => t !== article.title);
+            
+            await apiService.saveArticleLikes(newLikedArticles);
+            setLikedArticles(newLikedArticles);
+            setIsLiked(newLikedState);
         } catch (e) {
-            console.error("Failed to update liked articles in localStorage", e);
+            console.error("Failed to update liked articles", e);
         }
     };
 

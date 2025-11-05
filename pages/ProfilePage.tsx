@@ -4,16 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowDownTrayIcon, ArrowUpTrayIcon, TrashIcon, ArrowRightOnRectangleIcon, XMarkIcon, UserCircleIcon } from '../components/icons/IconComponents';
+import { apiService } from '../services/apiService';
+import { ArrowDownTrayIcon, TrashIcon, ArrowRightOnRectangleIcon, XMarkIcon, ExclamationTriangleIcon } from '../components/icons/IconComponents';
 import HealthProfileForm from '../components/forms/HealthProfileForm';
 import type { HealthProfile } from '../types';
-
-const DATA_KEYS = [
-    'everliv_health_biomarkers',
-    'everliv_health_test_history',
-    'everliv_health_alerts',
-    'everliv_health_profile'
-];
 
 const EditProfileModal: React.FC<{
     isOpen: boolean;
@@ -53,7 +47,6 @@ const EditProfileModal: React.FC<{
 const ProfilePage: React.FC = () => {
     const { user, logout, updateHealthProfile } = useAuth();
     const navigate = useNavigate();
-    const fileInputRef = useRef<HTMLInputElement>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     const handleLogout = () => {
@@ -61,15 +54,9 @@ const ProfilePage: React.FC = () => {
         navigate('/login');
     };
 
-    const handleExportData = () => {
+    const handleExportData = async () => {
         try {
-            const dataToExport: { [key: string]: any } = {};
-            DATA_KEYS.forEach(key => {
-                const item = localStorage.getItem(key);
-                if (item) {
-                    dataToExport[key] = JSON.parse(item);
-                }
-            });
+            const dataToExport = await apiService.exportAllData();
 
             if (Object.keys(dataToExport).length === 0) {
                 alert('No data found to export.');
@@ -92,66 +79,30 @@ const ProfilePage: React.FC = () => {
             alert('An error occurred while exporting your data.');
         }
     };
-
-    const handleImportClick = () => {
-        fileInputRef.current?.click();
-    };
-
-    const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-
-        if (!window.confirm('Are you sure you want to import this data? This will overwrite your current data.')) {
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
+    
+    const handleClearData = async () => {
+        if (window.confirm('Are you absolutely sure you want to delete all your data from the backend? This action cannot be undone.')) {
             try {
-                const text = e.target?.result;
-                if (typeof text !== 'string') {
-                    throw new Error('File could not be read');
-                }
-                const importedData = JSON.parse(text);
-
-                // Validate and set data
-                let importedKeysCount = 0;
-                DATA_KEYS.forEach(key => {
-                    if (importedData[key]) {
-                        localStorage.setItem(key, JSON.stringify(importedData[key]));
-                        importedKeysCount++;
-                    }
-                });
-
-                if (importedKeysCount > 0) {
-                    alert('Data imported successfully! The application will now reload.');
-                    window.location.reload();
-                } else {
-                    alert('The selected file does not contain valid Everliv Health data.');
-                }
-
+                await apiService.deleteAllData();
+                alert('All your data has been cleared. The application will now reload.');
+                // We logout because the user's profile data is gone
+                logout();
+                window.location.reload();
             } catch (error) {
-                console.error("Error importing data:", error);
-                alert('An error occurred while importing the data. Please ensure the file is a valid JSON backup.');
+                console.error("Error clearing data:", error);
+                alert('An error occurred while clearing your data.');
             }
-        };
-        reader.readAsText(file);
-        
-        // Reset file input value to allow importing the same file again
-        event.target.value = '';
-    };
-
-    const handleClearData = () => {
-        if (window.confirm('Are you absolutely sure you want to delete all your data? This action cannot be undone.')) {
-            DATA_KEYS.forEach(key => localStorage.removeItem(key));
-            alert('All your data has been cleared. The application will now reload.');
-            window.location.reload();
         }
     };
     
-    const handleSaveProfile = (data: HealthProfile) => {
-        updateHealthProfile(data);
-        setIsEditModalOpen(false);
+    const handleSaveProfile = async (data: HealthProfile) => {
+        try {
+            await updateHealthProfile(data);
+            setIsEditModalOpen(false);
+        } catch (error) {
+            console.error("Failed to save profile:", error);
+            // Optionally show an error in the modal
+        }
     };
 
     const InfoField: React.FC<{ label: string; value?: string | number | string[]; className?: string }> = ({ label, value, className = '' }) => {
@@ -220,15 +171,11 @@ const ProfilePage: React.FC = () => {
 
             <Card>
                 <h2 className="text-lg font-semibold text-on-surface">Data Management</h2>
-                <p className="text-sm text-on-surface-variant mt-1">Export a backup of your data or import from a file. All data is stored locally in your browser.</p>
-                <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <p className="text-sm text-on-surface-variant mt-1">Export a backup of your data from the backend. The import feature has been disabled for security reasons now that a backend is connected.</p>
+                <div className="mt-6 flex">
                     <Button onClick={handleExportData} variant="secondary" leftIcon={<ArrowDownTrayIcon className="h-5 w-5 mr-2" />}>
                         Export My Data
                     </Button>
-                    <Button onClick={handleImportClick} variant="secondary" leftIcon={<ArrowUpTrayIcon className="h-5 w-5 mr-2" />}>
-                        Import Data
-                    </Button>
-                    <input type="file" ref={fileInputRef} onChange={handleImportData} className="hidden" accept=".json"/>
                 </div>
             </Card>
             
@@ -237,7 +184,7 @@ const ProfilePage: React.FC = () => {
                 <div className="mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center">
                     <div>
                         <p className="font-medium text-on-surface">Clear All Data</p>
-                        <p className="text-sm text-on-surface-variant mt-1">Permanently remove all your health data from this browser.</p>
+                        <p className="text-sm text-on-surface-variant mt-1">Permanently remove all your health data from the backend.</p>
                     </div>
                     <div className="mt-4 sm:mt-0 flex-shrink-0">
                         <Button onClick={handleClearData} variant="danger" leftIcon={<TrashIcon className="h-5 w-5 mr-2" />}>

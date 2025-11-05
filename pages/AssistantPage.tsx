@@ -1,7 +1,8 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { analyzeBloodTest, createChatWithContext, getBiomarkerRecommendations } from '../services/geminiService';
-import type { ChatMessage, Biomarker, BloodTestAnalysis, BloodTestRecord, AIGeneratedRecommendations } from '../types';
+import { analyzeBloodTest, createChatWithContext } from '../services/geminiService';
+import { apiService } from '../services/apiService';
+import type { ChatMessage, Biomarker, BloodTestAnalysis } from '../types';
 import { MessageSender } from '../types';
 import Button from '../components/ui/Button';
 import { PaperAirplaneIcon, UserCircleIcon, SparklesIcon, MicrophoneIcon, PaperClipIcon, XMarkIcon, StopCircleIcon, MagnifyingGlassIcon } from '../components/icons/IconComponents';
@@ -16,9 +17,6 @@ declare global {
     }
 }
 
-const BIOMARKERS_STORAGE_KEY = 'everliv_health_biomarkers';
-const TEST_HISTORY_STORAGE_KEY = 'everliv_health_test_history';
-const CHAT_HISTORY_STORAGE_KEY = 'everliv_health_chat_history';
 const MAX_CHARS = 1000;
 
 
@@ -94,6 +92,7 @@ const AssistantPage: React.FC = () => {
     const [selectedImage, setSelectedImage] = useState<{ file: File, previewUrl: string } | null>(null);
     const [isRecording, setIsRecording] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [isInitialized, setIsInitialized] = useState(false);
     
     const chatRef = useRef<Chat | null>(null);
     const recognitionRef = useRef<any>(null);
@@ -103,46 +102,67 @@ const AssistantPage: React.FC = () => {
     const latestAnalysisRef = useRef<BloodTestAnalysis | null>(null);
 
     useEffect(() => {
-        // Load chat history from local storage
-        const savedHistory = localStorage.getItem(CHAT_HISTORY_STORAGE_KEY);
-        const initialMessages = savedHistory ? JSON.parse(savedHistory) : [{ sender: MessageSender.AI, text: "Hello! I'm your AI Health Assistant. I can now analyze blood test reports directly from our chat. How can I help you today?" }];
-        setMessages(initialMessages);
+        const initializeChat = async () => {
+            try {
+                // Load chat history and biomarkers from API
+                const [chatHistory, biomarkers] = await Promise.all([
+                    apiService.getChatHistory(),
+                    apiService.getBiomarkers()
+                ]);
 
-        // Load biomarker data for context
-        const storedBiomarkers = localStorage.getItem(BIOMARKERS_STORAGE_KEY);
-        const biomarkers: Biomarker[] = storedBiomarkers ? JSON.parse(storedBiomarkers) : [];
-        
-        chatRef.current = createChatWithContext(user, biomarkers);
-        
-        // Initialize Speech Recognition
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (SpeechRecognition) {
-            recognitionRef.current = new SpeechRecognition();
-            recognitionRef.current.continuous = true;
-            recognitionRef.current.interimResults = true;
-            recognitionRef.current.onresult = (event: any) => {
-                let interimTranscript = '';
-                let finalTranscript = '';
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        finalTranscript += event.results[i][0].transcript;
-                    } else {
-                        interimTranscript += event.results[i][0].transcript;
+                const initialMessages = chatHistory.length > 0 ? chatHistory : [{ sender: MessageSender.AI, text: "Hello! I'm your AI Health Assistant. I can now analyze blood test reports directly from our chat. How can I help you today?" }];
+                setMessages(initialMessages);
+
+                chatRef.current = createChatWithContext(user, biomarkers);
+            } catch (error) {
+                console.error("Failed to initialize chat:", error);
+                setMessages([{ sender: MessageSender.AI, text: "Sorry, I'm having trouble connecting. Please try again later." }]);
+            }
+
+            // Initialize Speech Recognition
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (SpeechRecognition) {
+                recognitionRef.current = new SpeechRecognition();
+                recognitionRef.current.continuous = true;
+                recognitionRef.current.interimResults = true;
+                recognitionRef.current.onresult = (event: any) => {
+                    let interimTranscript = '';
+                    let finalTranscript = '';
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) {
+                            finalTranscript += event.results[i][0].transcript;
+                        } else {
+                            interimTranscript += event.results[i][0].transcript;
+                        }
                     }
-                }
-                setInput(input + finalTranscript + interimTranscript);
-            };
-        }
+                    setInput(input + finalTranscript + interimTranscript);
+                };
+            }
+            setIsInitialized(true);
+        };
+        
+        initializeChat();
 
         return () => { if (recognitionRef.current) recognitionRef.current.stop(); };
     }, [user]);
 
     useEffect(() => {
-        localStorage.setItem(CHAT_HISTORY_STORAGE_KEY, JSON.stringify(messages));
+        // Debounced save to API
+        const handler = setTimeout(() => {
+             if (isInitialized && messages.length > 0) {
+                apiService.saveChatHistory(messages);
+            }
+        }, 1000);
+
+        return () => clearTimeout(handler);
+    }, [messages, isInitialized]);
+    
+    useEffect(() => {
         if (!searchQuery) {
             messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         }
     }, [messages, searchQuery]);
+
 
     useEffect(() => {
         if (textareaRef.current) {
@@ -174,77 +194,11 @@ const AssistantPage: React.FC = () => {
         if (!analysis) return;
 
         try {
-            const currentDate = new Date();
-            const currentDateISO = currentDate.toISOString();
-
-            const newTestRecord: BloodTestRecord = {
-                id: `test-${currentDate.getTime()}`,
-                date: currentDateISO,
-                analysis: analysis,
-            };
-
-            const storedTestHistory = localStorage.getItem(TEST_HISTORY_STORAGE_KEY);
-            const allTestHistory: BloodTestRecord[] = storedTestHistory ? JSON.parse(storedTestHistory) : [];
-            allTestHistory.push(newTestRecord);
-            localStorage.setItem(TEST_HISTORY_STORAGE_KEY, JSON.stringify(allTestHistory));
-
-            const storedBiomarkers = localStorage.getItem(BIOMARKERS_STORAGE_KEY);
-            let allBiomarkers: Biomarker[] = storedBiomarkers ? JSON.parse(storedBiomarkers) : [];
-
-            // Generate recommendations sequentially to avoid rate-limiting issues
-            const recommendations: AIGeneratedRecommendations[] = [];
-            for (const marker of analysis.biomarkers) {
-                const rec = await getBiomarkerRecommendations({
-                    name: marker.name,
-                    value: marker.value,
-                    unit: marker.unit,
-                    status: marker.status
-                });
-                recommendations.push(rec);
-            }
-
-            analysis.biomarkers.forEach((resultMarker, index) => {
-                const newValue = parseFloat(resultMarker.value);
-                if (isNaN(newValue)) return;
-
-                const newHistoryEntry = { value: newValue, date: currentDateISO, sourceTestId: newTestRecord.id };
-                const existingIndex = allBiomarkers.findIndex(b => b.name.toLowerCase() === resultMarker.name.toLowerCase());
-                
-                if (existingIndex > -1) {
-                    const existing = allBiomarkers[existingIndex];
-                    const lastValue = existing.history.length > 0 ? existing.history[existing.history.length - 1].value : newValue;
-                    
-                    existing.value = resultMarker.value;
-                    existing.unit = resultMarker.unit;
-                    existing.status = resultMarker.status;
-                    existing.range = resultMarker.range;
-                    existing.description = resultMarker.explanation;
-                    existing.lastUpdated = currentDateISO;
-                    existing.trend = newValue > lastValue ? 'up' : newValue < lastValue ? 'down' : 'stable';
-                    existing.history.push(newHistoryEntry);
-                    existing.recommendations = recommendations[index];
-                } else {
-                    allBiomarkers.push({
-                        name: resultMarker.name,
-                        value: resultMarker.value,
-                        unit: resultMarker.unit,
-                        status: resultMarker.status,
-                        range: resultMarker.range,
-                        description: resultMarker.explanation,
-                        trend: 'stable',
-                        lastUpdated: currentDateISO,
-                        history: [newHistoryEntry],
-                        recommendations: recommendations[index],
-                    });
-                }
-            });
-            
-            localStorage.setItem(BIOMARKERS_STORAGE_KEY, JSON.stringify(allBiomarkers));
+            await apiService.saveTestResult(analysis);
             
             const saveButton = document.getElementById('save-analysis-btn');
             if (saveButton) {
                 saveButton.id = ''; // Prevent future clicks
-                // Fix: Use setAttribute to disable the button and resolve TypeScript error.
                 (saveButton as HTMLButtonElement).disabled = true;
                 saveButton.innerHTML = `✅ Results Saved!`;
             }
@@ -283,7 +237,7 @@ const AssistantPage: React.FC = () => {
                 return newMessages;
             });
         }
-    }, []);
+    }, [formatAnalysisForChat]);
 
     useEffect(() => {
         const chatContainer = document.getElementById('chat-container');
@@ -424,6 +378,20 @@ const AssistantPage: React.FC = () => {
                             </div>
                         )
                     )}
+                     {!isInitialized && (
+                        <div className="flex items-start gap-3 w-full justify-start">
+                             <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-br from-primary-light to-primary flex items-center justify-center shadow-soft">
+                                <SparklesIcon className="h-6 w-6 text-white" />
+                            </div>
+                            <div className="max-w-xl rounded-2xl shadow-soft bg-surface text-on-surface rounded-bl-lg border border-gray-200/60">
+                                <div className="flex items-center space-x-1.5 p-3 px-4">
+                                    <span className="h-2 w-2 bg-gray-400 rounded-full animate-pulse [animation-delay:-0.3s]"></span>
+                                    <span className="h-2 w-2 bg-gray-400 rounded-full animate-pulse [animation-delay:-0.15s]"></span>
+                                    <span className="h-2 w-2 bg-gray-400 rounded-full animate-pulse"></span>
+                                </div>
+                            </div>
+                        </div>
+                     )}
                     <div ref={messagesEndRef} />
                 </div>
             </div>
@@ -454,12 +422,12 @@ const AssistantPage: React.FC = () => {
                         value={input}
                         onChange={(e) => setInput(e.target.value.slice(0, MAX_CHARS))}
                         onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }}}
-                        disabled={isLoading}
+                        disabled={isLoading || !isInitialized}
                     />
                     <Button 
                         onClick={handleSend} 
                         isLoading={isLoading} 
-                        disabled={(!input.trim() && !selectedImage)} 
+                        disabled={(!input.trim() && !selectedImage) || !isInitialized} 
                         className="h-10 w-10 p-0 flex-shrink-0 rounded-lg" 
                         aria-label="Send message"
                         title="Send message">
