@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type, Chat } from "@google/genai";
+import { GoogleGenAI, Type, Chat, Modality } from "@google/genai";
 import type { BloodTestAnalysis, Biomarker, AIGeneratedRecommendations, User } from '../types';
 
 if (!process.env.API_KEY) {
@@ -12,27 +12,27 @@ const analysisSchema = {
   properties: {
     summary: {
       type: Type.STRING,
-      description: "A concise, easy-to-understand summary of the key findings from the blood test results."
+      description: "Краткое, понятное резюме ключевых выводов из результатов анализа крови."
     },
     biomarkers: {
       type: Type.ARRAY,
-      description: "An array of significant biomarkers found in the results.",
+      description: "Массив значимых биомаркеров, найденных в результатах.",
       items: {
         type: Type.OBJECT,
         properties: {
-          name: { type: Type.STRING, description: "The name of the biomarker (e.g., 'Cholesterol', 'Glucose')." },
-          value: { type: Type.STRING, description: "The measured value of the biomarker as a string." },
-          unit: { type: Type.STRING, description: "The unit for the measured value (e.g., 'mg/dL', '%')." },
-          range: { type: Type.STRING, description: "The normal reference range for this biomarker." },
-          explanation: { type: Type.STRING, description: "A simple explanation of what this biomarker indicates about health." },
-          status: { type: Type.STRING, description: "Status of the biomarker, can be 'normal', 'borderline', 'high', or 'low'."}
+          name: { type: Type.STRING, description: "Название биомаркера (например, 'Холестерин', 'Глюкоза')." },
+          value: { type: Type.STRING, description: "Измеренное значение биомаркера в виде строки." },
+          unit: { type: Type.STRING, description: "Единица измерения для значения (например, 'мг/дл', '%')." },
+          range: { type: Type.STRING, description: "Нормальный референсный диапазон для этого биомаркера." },
+          explanation: { type: Type.STRING, description: "Простое объяснение того, что этот биомаркер говорит о здоровье." },
+          status: { type: Type.STRING, description: "Статус биомаркера, может быть 'норма', 'пограничное', 'высокий' или 'низкий'."}
         },
         required: ["name", "value", "unit", "range", "explanation", "status"]
       }
     },
     recommendations: {
       type: Type.ARRAY,
-      description: "A list of 3-5 general, non-prescriptive wellness and lifestyle recommendations based on the results.",
+      description: "Список из 3-5 общих, не предписывающих рекомендаций по здоровому образу жизни и благополучию на основе результатов.",
       items: {
         type: Type.STRING
       }
@@ -44,18 +44,20 @@ const analysisSchema = {
 
 export const analyzeBloodTest = async (base64Image: string, mimeType: string, customBiomarkers?: string): Promise<BloodTestAnalysis> => {
   const userFocusPrompt = customBiomarkers
-    ? `The user is particularly interested in the following biomarkers: ${customBiomarkers}. Please prioritize these in your analysis if they are present in the report.`
+    ? `Пользователь особенно интересуется следующими биомаркерами: ${customBiomarkers}. Пожалуйста, уделите им первоочередное внимание в своем анализе, если они присутствуют в отчете.`
     : '';
 
-  const prompt = `You are a helpful AI health analyst for the EVERLIV HEALTH app. Your task is to analyze an image of a blood test report. 
+  const prompt = `Вы — полезный ИИ-аналитик здоровья для приложения EVERLIV HEALTH. Ваша задача — проанализировать изображение отчета об анализе крови.
   
-  IMPORTANT: You are not a medical professional. Do NOT provide any medical diagnosis, treatment plans, or prescriptions. Your analysis should be informative and focused on general wellness.
+  ВАЖНО: Вы не являетесь медицинским работником. НЕ предоставляйте никаких медицинских диагнозов, планов лечения или рецептов. Ваш анализ должен быть информативным и сосредоточенным на общем благополучии.
   
-  Analyze the provided blood test report image and structure your findings into a JSON format. Identify key biomarkers, their values, units, normal ranges, and provide a simple explanation and status (normal, borderline, high, or low).
+  Проанализируйте предоставленное изображение отчета об анализе крови и структурируйте свои выводы в формате JSON. Определите ключевые биомаркеры, их значения, единицы измерения, нормальные диапазоны, а также предоставьте простое объяснение и статус (норма, пограничное, высокий или низкий).
   
   ${userFocusPrompt}
   
-  Here is the blood test report:`;
+  Ваш ответ ДОЛЖЕН быть полностью на РУССКОМ языке.
+  
+  Вот отчет об анализе крови:`;
 
   try {
     const response = await ai.models.generateContent({
@@ -80,15 +82,14 @@ export const analyzeBloodTest = async (base64Image: string, mimeType: string, cu
     const jsonString = response.text;
     const parsedResult = JSON.parse(jsonString);
     
-    // Basic validation to ensure the parsed object matches the expected structure
     if (parsedResult && parsedResult.summary && Array.isArray(parsedResult.biomarkers) && Array.isArray(parsedResult.recommendations)) {
         return parsedResult as BloodTestAnalysis;
     } else {
-        throw new Error("AI response did not match the expected format.");
+        throw new Error("Ответ ИИ не соответствует ожидаемому формату.");
     }
   } catch (error) {
-    console.error("Error analyzing blood test with Gemini:", error);
-    throw new Error("Failed to analyze blood test results. The AI model may be temporarily unavailable.");
+    console.error("Ошибка анализа анализа крови с помощью Gemini:", error);
+    throw new Error("Не удалось проанализировать результаты анализа крови. Модель ИИ может быть временно недоступна.");
   }
 };
 
@@ -98,22 +99,22 @@ const recommendationsSchema = {
     properties: {
         nutrition: {
             type: Type.ARRAY,
-            description: "A list of 2-4 actionable nutrition and dietary recommendations.",
+            description: "Список из 2-4 действенных рекомендаций по питанию и диете.",
             items: { type: Type.STRING }
         },
         lifestyle: {
             type: Type.ARRAY,
-            description: "A list of 2-3 lifestyle recommendations, including exercise and other habits.",
+            description: "Список из 2-3 рекомендаций по образу жизни, включая упражнения и другие привычки.",
             items: { type: Type.STRING }
         },
         supplements: {
             type: Type.ARRAY,
-            description: "A list of 1-2 potential supplements. MUST include a disclaimer to consult a doctor before taking any.",
+            description: "Список из 1-2 потенциальных добавок. ДОЛЖЕН содержать отказ от ответственности о необходимости проконсультироваться с врачом перед приемом.",
             items: { type: Type.STRING }
         },
         next_checkup: {
             type: Type.STRING,
-            description: "A brief recommendation on when to get the next check-up for this biomarker (e.g., 'In 3-6 months')."
+            description: "Краткая рекомендация о том, когда следует пройти следующий осмотр для этого биомаркера (например, 'Через 3-6 месяцев')."
         }
     },
     required: ["nutrition", "lifestyle", "supplements", "next_checkup"]
@@ -121,12 +122,12 @@ const recommendationsSchema = {
 
 export const getBiomarkerRecommendations = async (biomarker: { name: string, value: string, unit: string, status: 'normal' | 'borderline' | 'high' | 'low' }): Promise<AIGeneratedRecommendations> => {
     const prompt = `
-        You are an AI health and wellness coach for the EVERLIV HEALTH app.
-        A user has a biomarker result for "${biomarker.name}" which is ${biomarker.value} ${biomarker.unit}. The status is considered "${biomarker.status}".
+        Вы — ИИ-тренер по здоровью и благополучию для приложения EVERLIV HEALTH.
+        У пользователя есть результат биомаркера "${biomarker.name}", который составляет ${biomarker.value} ${biomarker.unit}. Статус считается "${biomarker.status}".
         
-        IMPORTANT: You are not a medical professional. Do NOT provide any medical diagnosis, treatment plans, or prescriptions. Your advice must be general, safe, and focus on lifestyle, diet, and exercise. Always suggest consulting a healthcare professional for personalized advice. For supplements, explicitly state that a doctor should be consulted.
+        ВАЖНО: Вы не являетесь медицинским работником. НЕ предоставляйте никаких медицинских диагнозов, планов лечения или рецептов. Ваши советы должны быть общими, безопасными и сосредоточенными на образе жизни, диете и упражнениях. Всегда предлагайте проконсультироваться с медицинским работником для получения персональных советов. Для добавок четко укажите, что следует проконсультироваться с врачом.
 
-        Based on this, provide a structured set of actionable recommendations in JSON format. The response should be concise and easy to read.
+        Основываясь на этом, предоставьте структурированный набор действенных рекомендаций в формате JSON. Ответ должен быть кратким, легким для чтения и полностью на русском языке.
     `;
 
     try {
@@ -142,84 +143,102 @@ export const getBiomarkerRecommendations = async (biomarker: { name: string, val
         const parsedResult = JSON.parse(jsonString);
         return parsedResult as AIGeneratedRecommendations;
     } catch (error) {
-        console.error(`Error getting recommendations for ${biomarker.name}:`, error);
-        // Fallback to a default error structure
+        console.error(`Ошибка при получении рекомендаций для ${biomarker.name}:`, error);
         return {
-            nutrition: ["Could not generate AI recommendations at this time."],
-            lifestyle: ["Please consult with a healthcare provider for advice."],
+            nutrition: ["В данный момент не удалось сгенерировать рекомендации ИИ."],
+            lifestyle: ["Пожалуйста, проконсультируйтесь с врачом для получения совета."],
             supplements: [],
-            next_checkup: "N/A"
+            next_checkup: "Н/Д"
         };
     }
 };
 
-/**
- * Creates a new chat session with contextual user data.
- * @param user The user's profile information.
- * @param biomarkers A list of the user's biomarkers.
- * @returns A new Chat instance.
- */
+export const generateMeditationAudio = async (script: string): Promise<string> => {
+    try {
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash-preview-tts",
+            contents: [{ parts: [{ text: script }] }],
+            config: {
+                responseModalities: [Modality.AUDIO],
+                speechConfig: {
+                    voiceConfig: {
+                        prebuiltVoiceConfig: { voiceName: 'Kore' },
+                    },
+                },
+            },
+        });
+        const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        if (!base64Audio) {
+            throw new Error("Аудиоданные не получены от API.");
+        }
+        return base64Audio;
+    } catch (error) {
+        console.error("Ошибка при генерации аудио для медитации:", error);
+        throw new Error("Не удалось сгенерировать аудио для медитации. Пожалуйста, попробуйте позже.");
+    }
+};
+
 export const createChatWithContext = (user: User, biomarkers: Biomarker[]): Chat => {
-    let context = `--- Start of User Health Profile ---\n`;
-    context += `User Name: ${user.name}\n`;
+    let context = `--- Начало профиля здоровья пользователя ---\n`;
+    context += `Имя пользователя: ${user.name}\n`;
     
     if (user.healthProfile) {
         const profile = user.healthProfile;
-        if(profile.age) context += `Age: ${profile.age}\n`;
-        if(profile.sex) context += `Sex: ${profile.sex}\n`;
-        if(profile.height) context += `Height: ${profile.height} cm\n`;
-        if(profile.weight) context += `Weight: ${profile.weight} kg\n`;
-        if(profile.activityLevel) context += `Activity Level: ${profile.activityLevel}\n`;
+        if(profile.age) context += `Возраст: ${profile.age}\n`;
+        if(profile.sex) context += `Пол: ${profile.sex}\n`;
+        if(profile.height) context += `Рост: ${profile.height} см\n`;
+        if(profile.weight) context += `Вес: ${profile.weight} кг\n`;
+        if(profile.activityLevel) context += `Уровень активности: ${profile.activityLevel}\n`;
         if (profile.healthGoals && profile.healthGoals.length > 0) {
-            context += `Health Goals: ${profile.healthGoals.join(', ')}\n`;
+            context += `Цели в области здоровья: ${profile.healthGoals.join(', ')}\n`;
         }
         if (profile.dietaryPreferences) {
-            context += `Dietary Preferences: ${profile.dietaryPreferences}\n`;
+            context += `Предпочтения в питании: ${profile.dietaryPreferences}\n`;
         }
         if (profile.chronicConditions) {
-            context += `Known Conditions: ${profile.chronicConditions}\n`;
+            context += `Известные заболевания: ${profile.chronicConditions}\n`;
         }
         if (profile.allergies) {
-            context += `Allergies: ${profile.allergies}\n`;
+            context += `Аллергии: ${profile.allergies}\n`;
         }
         if (profile.supplements) {
-            context += `Current Supplements: ${profile.supplements}\n`;
+            context += `Текущие добавки: ${profile.supplements}\n`;
         }
     }
 
-
     if (biomarkers.length > 0) {
-        context += "\nRecent Biomarker Data:\n";
+        context += "\nПоследние данные биомаркеров:\n";
         biomarkers.forEach(b => {
-            context += `- ${b.name}: ${b.value} ${b.unit} (Status: ${b.status}, Last Updated: ${new Date(b.lastUpdated).toLocaleDateString()})\n`;
+            context += `- ${b.name}: ${b.value} ${b.unit} (Статус: ${b.status}, Последнее обновление: ${new Date(b.lastUpdated).toLocaleDateString()})\n`;
         });
     } else {
-        context += "\nNo biomarker data available for this user yet.\n";
+        context += "\nДанные о биомаркерах для этого пользователя пока отсутствуют.\n";
     }
-    context += `--- End of User Health Profile ---\n`;
+    context += `--- Конец профиля здоровья пользователя ---\n`;
 
     return ai.chats.create({
         model: 'gemini-2.5-flash',
         config: {
-            systemInstruction: `You are EVERLIV HEALTH's AI Assistant, an expert in providing supportive and safe health and wellness information. Your primary goal is user safety.
+            systemInstruction: `Вы — ИИ-ассистент EVERLIV HEALTH, эксперт в предоставлении поддерживающей и безопасной информации о здоровье и благополучии. Ваша главная цель — безопасность пользователя. Ваш ответ всегда должен быть на русском языке.
 
-            **CORE SAFETY DIRECTIVE: HANDLING MEDICAL IMAGES**
-            This is your most important instruction. It overrides everything else.
+            **ОСНОВНАЯ ДИРЕКТИВА БЕЗОПАСНОСТИ: ОБРАБОТКА МЕДИЦИНСКИХ ИЗОБРАЖЕНИЙ**
+            Это ваша самая важная инструкция. Она отменяет все остальные.
             
-            **Exception for Blood Tests:**
-            - If a user uploads an image and their message indicates it is a blood test report (e.g., asks to "analyze my blood test", "read these results", "what does this report say?"), you MUST respond with the exact string \`[ANALYZE_BLOOD_TEST]\` and nothing else. This is a special command for the application to trigger its blood test analysis tool.
+            **Исключение для анализов крови:**
+            - Если пользователь загружает изображение и его сообщение указывает, что это отчет об анализе крови (например, просит "проанализировать мой анализ крови", "прочитать эти результаты", "что говорит этот отчет?"), вы ДОЛЖНЫ ответить точной строкой \`[ANALYZE_BLOOD_TEST]\` и ничем больше. Это специальная команда для приложения, чтобы запустить инструмент анализа крови.
 
-            **For all other medical-related images (e.g., skin rashes, moles, injuries):**
-            You MUST follow this three-step process exactly:
-            1.  **Acknowledge and Refuse Diagnosis:** Immediately state that you are an AI and are not capable of providing a medical diagnosis. For example: "Thank you for sharing this image. As an AI, I cannot provide a medical diagnosis or identify health conditions from this type of image."
-            2.  **Advise Professional Consultation:** Strongly and clearly recommend that the user consult a qualified healthcare professional. Be specific if possible. For example: "It's very important to have this looked at by a doctor or a dermatologist for an accurate diagnosis."
-            3.  **Do Not Speculate:** You must NOT describe the image in medical terms, guess at what it might be, or offer any potential causes or treatments. Your single, focused goal is to direct the user to a real medical expert.
+            **Для всех остальных медицинских изображений (например, кожные высыпания, родинки, травмы):**
+            Вы ДОЛЖНЫ точно следовать этому трехэтапному процессу:
+            1.  **Признать и отказаться от диагностики:** Немедленно заявите, что вы — ИИ и не способны ставить медицинский диагноз. Например: "Спасибо, что поделились этим изображением. Как ИИ, я не могу ставить медицинский диагноз или определять состояния здоровья по такому типу изображений."
+            2.  **Посоветовать профессиональную консультацию:** Настоятельно и четко порекомендуйте пользователю проконсультироваться с квалифицированным медицинским работником. Будьте конкретны, если это возможно. Например: "Очень важно, чтобы это осмотрел врач или дерматолог для точного диагноза."
+            3.  **Не спекулировать:** Вы не должны описывать изображение в медицинских терминах, предполагать, что это может быть, или предлагать какие-либо возможные причины или методы лечения. Ваша единственная, сфокусированная цель — направить пользователя к настоящему медицинскому эксперту.
 
-            **General Conduct:**
-            - For all other questions, be empathetic, clear, and encouraging.
-            - Never provide a medical diagnosis or prescribe medication, even for text-based questions. Always defer to healthcare professionals for personal health concerns.
-            - Use markdown for formatting lists or key points to improve readability.
-            - Utilize the user's health profile (provided below) to make your general wellness advice more relevant and personalized, but do not simply list their data back to them.
+            **Общее поведение:**
+            - На все остальные вопросы отвечайте эмпатично, четко и ободряюще.
+            - Никогда не ставьте медицинский диагноз и не назначайте лекарства, даже на текстовые вопросы. Всегда перенаправляйте к медицинским работникам по личным вопросам здоровья.
+            - Используйте markdown для форматирования списков или ключевых моментов для улучшения читаемости.
+            - Используйте профиль здоровья пользователя (предоставленный ниже), чтобы сделать ваши общие советы по благополучию более релевантными и персонализированными, но не просто перечисляйте его данные.
+            - ВСЕГДА отвечайте на русском языке.
             
             ${context}`,
         },
@@ -227,27 +246,28 @@ export const createChatWithContext = (user: User, biomarkers: Biomarker[]): Chat
 };
 
 export const getDailyHealthTip = async (user: User, biomarkers: Biomarker[]): Promise<string> => {
-    const relevantBiomarkers = biomarkers.filter(b => b.status !== 'normal').map(b => `- ${b.name}: ${b.value} ${b.unit} (Status: ${b.status})`).join('\n');
+    const relevantBiomarkers = biomarkers.filter(b => b.status !== 'normal').map(b => `- ${b.name}: ${b.value} ${b.unit} (Статус: ${b.status})`).join('\n');
     
     const userGoals = user.healthProfile?.healthGoals || [];
     const healthProfileContext = user.healthProfile ? `
-        The user is a ${user.healthProfile.age}-year-old ${user.healthProfile.sex}.
-        Their activity level is ${user.healthProfile.activityLevel}.
-        They have the following known conditions: ${user.healthProfile.chronicConditions || 'None reported'}.
-        They have the following allergies: ${user.healthProfile.allergies || 'None reported'}.
-        They are currently taking the following supplements: ${user.healthProfile.supplements || 'None reported'}.
+        Пользователь: ${user.healthProfile.age} лет, ${user.healthProfile.sex}.
+        Уровень активности: ${user.healthProfile.activityLevel}.
+        Известные заболевания: ${user.healthProfile.chronicConditions || 'Не указаны'}.
+        Аллергии: ${user.healthProfile.allergies || 'Не указаны'}.
+        Принимаемые добавки: ${user.healthProfile.supplements || 'Не указаны'}.
     ` : '';
 
     const prompt = `
-        You are an AI health and wellness coach for the EVERLIV HEALTH app.
-        A user has the following goals: ${userGoals.join(', ')}.
+        Вы — ИИ-тренер по здоровью и благополучию для приложения EVERLIV HEALTH.
+        У пользователя следующие цели: ${userGoals.join(', ')}.
         ${healthProfileContext}
-        Their current biomarkers that are not in the normal range are:
-        ${relevantBiomarkers.length > 0 ? relevantBiomarkers : 'All biomarkers are currently in the normal range.'}
+        Его текущие биомаркеры, которые не находятся в нормальном диапазоне:
+        ${relevantBiomarkers.length > 0 ? relevantBiomarkers : 'Все биомаркеры в настоящее время в норме.'}
 
-        Based on this information, provide a single, short, actionable, and encouraging health tip for their day.
-        The tip should be concise, easy to understand, and no more than two sentences. Do not greet the user or add any conversational fluff. Just provide the tip.
-        Example: "To support your heart health goal, try incorporating a 15-minute brisk walk into your lunch break today for a great cardio boost!"
+        Основываясь на этой информации, предоставьте один короткий, действенный и ободряющий совет по здоровью на день.
+        Совет должен быть кратким, понятным и не более двух предложений. Не приветствуйте пользователя и не добавляйте разговорной "воды". Просто предоставьте совет.
+        Ответ должен быть полностью на русском языке.
+        Пример: "Для поддержки вашей цели по здоровью сердца, попробуйте включить 15-минутную быструю прогулку в обеденный перерыв сегодня для отличного кардио-ускорения!"
     `;
 
     try {
@@ -257,8 +277,7 @@ export const getDailyHealthTip = async (user: User, biomarkers: Biomarker[]): Pr
         });
         return response.text.trim();
     } catch (error) {
-        console.error("Error generating daily health tip:", error);
-        // Provide a generic but useful fallback tip
-        return "Remember to stay hydrated and listen to your body today. You've got this!";
+        console.error("Ошибка при генерации ежедневного совета по здоровью:", error);
+        return "Не забывайте пить достаточно воды и прислушиваться к своему телу сегодня. У вас все получится!";
     }
 };

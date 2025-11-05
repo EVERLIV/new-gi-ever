@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 // Props for all icon components
@@ -291,5 +292,26 @@ export const StopCircleIcon: React.FC<IconProps> = (props) => (
 export const LockClosedIcon: React.FC<IconProps> = (props) => (
     <svg {...defaultProps} {...props}>
         <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    </svg>
+);
+
+export const GoogleIcon: React.FC<IconProps> = (props) => (
+    <svg viewBox="0 0 48 48" {...props} fill="none">
+        <path
+            fill="#4285F4"
+            d="M45.12 24.5c0-1.56-.14-3.06-.4-4.5H24v8.51h11.84c-.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.17z"
+        ></path>
+        <path
+            fill="#34A853"
+            d="M24 46c5.94 0 10.92-1.96 14.56-5.3l-7.11-5.52c-1.97 1.32-4.49 2.1-7.45 2.1-5.73 0-10.58-3.87-12.31-9.07H4.34v5.7C7.96 40.07 15.4 46 24 46z"
+        ></path>
+        <path
+            fill="#FBBC05"
+            d="M11.69 28.18a14.23 14.23 0 010-8.36v-5.7H4.34a23.9 23.9 0 000 19.76l7.35-5.7z"
+        ></path>
+        <path
+            fill="#EA4335"
+            d="M24 10.75c3.23 0 6.13 1.11 8.41 3.29l6.31-6.31A23.8 23.8 0 0024 2 23.9 23.9 0 004.34 14.12l7.35 5.7c1.73-5.2 6.58-9.07 12.31-9.07z"
+        ></path>
     </svg>
 );

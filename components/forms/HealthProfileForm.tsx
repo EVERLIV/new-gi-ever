@@ -1,74 +1,72 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { HealthProfile } from '../../types';
 import Button from '../ui/Button';
 
-interface HealthProfileFormProps {
+const HealthProfileForm: React.FC<{
     initialData: HealthProfile;
     onSubmit: (data: HealthProfile) => void;
     submitButtonText: string;
     onCancel?: () => void;
     isModalVersion?: boolean;
     isSubmitting?: boolean;
-}
-
-const steps = [
-    { id: 1, name: 'Basics' },
-    { id: 2, name: 'Metrics' },
-    { id: 3, name: 'Lifestyle' },
-    { id: 4, name: 'Goals' },
-    { id: 5, name: 'Medical' }
-];
-
-const healthGoalOptions = [
-    'Improve heart health',
-    'Lose weight',
-    'Build muscle',
-    'Improve sleep',
-    'Reduce stress',
-    'Increase energy levels',
-    'Improve gut health',
-    'Longevity & anti-aging',
-];
-
-const activityLevelOptions: { value: HealthProfile['activityLevel']; label: string; description: string }[] = [
-    { value: 'sedentary', label: 'Sedentary', description: 'Little or no exercise' },
-    { value: 'light', label: 'Light', description: 'Light exercise/sports 1-3 days/week' },
-    { value: 'moderate', label: 'Moderate', description: 'Moderate exercise/sports 3-5 days/week' },
-    { value: 'active', label: 'Active', description: 'Hard exercise/sports 6-7 days/week' },
-    { value: 'very_active', label: 'Very Active', description: 'Very hard exercise & physical job' },
-];
-
-const ProgressBar: React.FC<{ currentStep: number }> = ({ currentStep }) => {
-    const currentStepInfo = steps.find(s => s.id === currentStep);
-
-    return (
-        <div className="mb-8">
-            <div className="flex justify-between items-center mb-2">
-                <h3 className="text-lg font-semibold text-primary">{currentStepInfo?.name}</h3>
-                <span className="text-sm font-medium text-on-surface-variant">
-                    Step {currentStep} of {steps.length}
-                </span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                    className="bg-primary h-2 rounded-full transition-all duration-300 ease-in-out" 
-                    style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
-                />
-            </div>
-        </div>
-    );
-};
-
-
-const HealthProfileForm: React.FC<HealthProfileFormProps> = ({ initialData, onSubmit, submitButtonText, onCancel, isModalVersion = false, isSubmitting = false }) => {
+}> = ({ initialData, onSubmit, submitButtonText, onCancel, isModalVersion = false, isSubmitting = false }) => {
+    const { t } = useTranslation();
     const [currentStep, setCurrentStep] = useState(1);
     const [formData, setFormData] = useState<HealthProfile>(initialData);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
+    const steps = [
+        { id: 1, name: t('healthProfileForm.step1') },
+        { id: 2, name: t('healthProfileForm.step2') },
+        { id: 3, name: t('healthProfileForm.step3') },
+        { id: 4, name: t('healthProfileForm.step4') },
+        { id: 5, name: t('healthProfileForm.step5') }
+    ];
+
+    const healthGoalOptions = [
+        t('healthProfileForm.goalOptions.heart'),
+        t('healthProfileForm.goalOptions.weight'),
+        t('healthProfileForm.goalOptions.muscle'),
+        t('healthProfileForm.goalOptions.sleep'),
+        t('healthProfileForm.goalOptions.stress'),
+        t('healthProfileForm.goalOptions.energy'),
+        t('healthProfileForm.goalOptions.gut'),
+        t('healthProfileForm.goalOptions.longevity'),
+    ];
+
+    const activityLevelOptions: { value: HealthProfile['activityLevel']; label: string; description: string }[] = [
+        { value: 'sedentary', label: t('healthProfileForm.activityOptions.sedentary'), description: t('healthProfileForm.activityOptions.sedentaryDesc') },
+        { value: 'light', label: t('healthProfileForm.activityOptions.light'), description: t('healthProfileForm.activityOptions.lightDesc') },
+        { value: 'moderate', label: t('healthProfileForm.activityOptions.moderate'), description: t('healthProfileForm.activityOptions.moderateDesc') },
+        { value: 'active', label: t('healthProfileForm.activityOptions.active'), description: t('healthProfileForm.activityOptions.activeDesc') },
+        { value: 'very_active', label: t('healthProfileForm.activityOptions.very_active'), description: t('healthProfileForm.activityOptions.very_activeDesc') },
+    ];
+
+    const ProgressBar: React.FC<{ currentStep: number }> = ({ currentStep }) => {
+        const currentStepInfo = steps.find(s => s.id === currentStep);
+
+        return (
+            <div className="mb-8">
+                <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-lg font-semibold text-primary">{currentStepInfo?.name}</h3>
+                    <span className="text-sm font-medium text-on-surface-variant">
+                        {t('healthProfileForm.stepLabel', { current: currentStep, total: steps.length })}
+                    </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                        className="bg-primary h-2 rounded-full transition-all duration-300 ease-in-out" 
+                        style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
+                    />
+                </div>
+            </div>
+        );
+    };
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
-        // Clear error for this field if it exists
         if (errors[name]) {
             setErrors(prev => {
                 const newErrors = { ...prev };
@@ -80,7 +78,6 @@ const HealthProfileForm: React.FC<HealthProfileFormProps> = ({ initialData, onSu
     
     const handleActivityLevelChange = (value: HealthProfile['activityLevel']) => {
         setFormData(prev => ({ ...prev, activityLevel: value }));
-        // Clear error for this field if it exists
         if (errors.activityLevel) {
             setErrors(prev => {
                 const newErrors = { ...prev };
@@ -106,17 +103,16 @@ const HealthProfileForm: React.FC<HealthProfileFormProps> = ({ initialData, onSu
     const validateStep = () => {
         const newErrors: { [key: string]: string } = {};
         if (currentStep === 1) {
-            if (!formData.age || formData.age <= 0) newErrors.age = "A valid age is required.";
-            if (!formData.sex) newErrors.sex = "Sex is required.";
+            if (!formData.age || formData.age <= 0) newErrors.age = t('healthProfileForm.ageError');
+            if (!formData.sex) newErrors.sex = t('healthProfileForm.sexError');
         }
         if (currentStep === 2) {
-            if (!formData.height || formData.height <= 0) newErrors.height = "A valid height is required.";
-            if (!formData.weight || formData.weight <= 0) newErrors.weight = "A valid weight is required.";
+            if (!formData.height || formData.height <= 0) newErrors.height = t('healthProfileForm.heightError');
+            if (!formData.weight || formData.weight <= 0) newErrors.weight = t('healthProfileForm.weightError');
         }
         if (currentStep === 3) {
-            if (!formData.activityLevel) newErrors.activityLevel = "An activity level is required.";
+            if (!formData.activityLevel) newErrors.activityLevel = t('healthProfileForm.activityError');
         }
-        // Step 4 and 5 have optional fields, so no validation needed unless specified
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -137,27 +133,21 @@ const HealthProfileForm: React.FC<HealthProfileFormProps> = ({ initialData, onSu
     
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // Final validation of all required fields before submitting
         const newErrors: { [key: string]: string } = {};
-        if (!formData.age || formData.age <= 0) newErrors.age = "A valid age is required.";
-        if (!formData.sex) newErrors.sex = "Sex is required.";
-        if (!formData.height || formData.height <= 0) newErrors.height = "A valid height is required.";
-        if (!formData.weight || formData.weight <= 0) newErrors.weight = "A valid weight is required.";
-        if (!formData.activityLevel) newErrors.activityLevel = "An activity level is required.";
+        if (!formData.age || formData.age <= 0) newErrors.age = t('healthProfileForm.ageError');
+        if (!formData.sex) newErrors.sex = t('healthProfileForm.sexError');
+        if (!formData.height || formData.height <= 0) newErrors.height = t('healthProfileForm.heightError');
+        if (!formData.weight || formData.weight <= 0) newErrors.weight = t('healthProfileForm.weightError');
+        if (!formData.activityLevel) newErrors.activityLevel = t('healthProfileForm.activityError');
 
         setErrors(newErrors);
 
         if (Object.keys(newErrors).length === 0) {
             onSubmit(formData);
         } else {
-            // If there are errors from any step, navigate to the first problematic step
-            if (newErrors.age || newErrors.sex) {
-                setCurrentStep(1);
-            } else if (newErrors.height || newErrors.weight) {
-                setCurrentStep(2);
-            } else if (newErrors.activityLevel) {
-                setCurrentStep(3);
-            }
+            if (newErrors.age || newErrors.sex) setCurrentStep(1);
+            else if (newErrors.height || newErrors.weight) setCurrentStep(2);
+            else if (newErrors.activityLevel) setCurrentStep(3);
         }
     };
 
@@ -177,15 +167,15 @@ const HealthProfileForm: React.FC<HealthProfileFormProps> = ({ initialData, onSu
 
             {currentStep === 1 && (
                 <div className="space-y-4 animate-fadeIn">
-                    <FormField label="Age" name="age" error={errors.age}>
-                        <input type="number" name="age" id="age" value={formData.age} onChange={handleChange} className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-4 py-2" />
+                    <FormField label={t('healthProfileForm.age')} name="age" error={errors.age}>
+                        <input type="number" name="age" id="age" value={formData.age} onChange={handleChange} className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-4 py-2 text-on-surface" />
                     </FormField>
-                     <FormField label="Biological Sex" name="sex" error={errors.sex}>
-                        <select name="sex" id="sex" value={formData.sex} onChange={handleChange} className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-4 py-2">
-                            <option value="" disabled>Select...</option>
-                            <option value="male">Male</option>
-                            <option value="female">Female</option>
-                            <option value="other">Other</option>
+                     <FormField label={t('healthProfileForm.sex')} name="sex" error={errors.sex}>
+                        <select name="sex" id="sex" value={formData.sex} onChange={handleChange} className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-4 py-2 text-on-surface">
+                            <option value="" disabled>{t('healthProfileForm.sexOptions.select')}</option>
+                            <option value="male">{t('healthProfileForm.sexOptions.male')}</option>
+                            <option value="female">{t('healthProfileForm.sexOptions.female')}</option>
+                            <option value="other">{t('healthProfileForm.sexOptions.other')}</option>
                         </select>
                     </FormField>
                 </div>
@@ -193,18 +183,18 @@ const HealthProfileForm: React.FC<HealthProfileFormProps> = ({ initialData, onSu
             
             {currentStep === 2 && (
                 <div className="space-y-4 animate-fadeIn">
-                    <FormField label="Height (cm)" name="height" error={errors.height}>
-                         <input type="number" name="height" id="height" value={formData.height} onChange={handleChange} className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-4 py-2" />
+                    <FormField label={t('healthProfileForm.height')} name="height" error={errors.height}>
+                         <input type="number" name="height" id="height" value={formData.height} onChange={handleChange} className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-4 py-2 text-on-surface" />
                     </FormField>
-                    <FormField label="Weight (kg)" name="weight" error={errors.weight}>
-                         <input type="number" name="weight" id="weight" value={formData.weight} onChange={handleChange} className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-4 py-2" />
+                    <FormField label={t('healthProfileForm.weight')} name="weight" error={errors.weight}>
+                         <input type="number" name="weight" id="weight" value={formData.weight} onChange={handleChange} className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-4 py-2 text-on-surface" />
                     </FormField>
                 </div>
             )}
             
             {currentStep === 3 && (
                  <div className="space-y-6 animate-fadeIn">
-                    <FormField label="How active are you?" name="activityLevel" error={errors.activityLevel}>
+                    <FormField label={t('healthProfileForm.activity')} name="activityLevel" error={errors.activityLevel}>
                         <div className="grid grid-cols-1 gap-3 mt-2">
                             {activityLevelOptions.map(option => (
                                 <button
@@ -219,15 +209,15 @@ const HealthProfileForm: React.FC<HealthProfileFormProps> = ({ initialData, onSu
                             ))}
                         </div>
                     </FormField>
-                    <FormField label="Dietary Preferences (Optional)" name="dietaryPreferences">
-                        <textarea name="dietaryPreferences" id="dietaryPreferences" value={formData.dietaryPreferences} onChange={handleChange} rows={3} className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-4 py-2" placeholder="e.g., Vegetarian, gluten-free, low-carb..." />
+                    <FormField label={t('healthProfileForm.diet')} name="dietaryPreferences">
+                        <textarea name="dietaryPreferences" id="dietaryPreferences" value={formData.dietaryPreferences} onChange={handleChange} rows={3} className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-4 py-2 text-on-surface" placeholder={t('healthProfileForm.dietPlaceholder')} />
                     </FormField>
                 </div>
             )}
             
             {currentStep === 4 && (
                 <div className="animate-fadeIn">
-                    <FormField label="What are your main health goals?" name="healthGoals">
+                    <FormField label={t('healthProfileForm.goals')} name="healthGoals">
                         <div className="flex flex-wrap gap-3 mt-2">
                             {healthGoalOptions.map(goal => (
                                 <button
@@ -241,35 +231,35 @@ const HealthProfileForm: React.FC<HealthProfileFormProps> = ({ initialData, onSu
                                 </button>
                             ))}
                         </div>
-                        <p className="text-xs text-on-surface-variant mt-2">Select up to 3.</p>
+                        <p className="text-xs text-on-surface-variant mt-2">{t('healthProfileForm.goalsHint')}</p>
                     </FormField>
                 </div>
             )}
 
              {currentStep === 5 && (
                 <div className="space-y-4 animate-fadeIn">
-                     <FormField label="Any chronic conditions? (Optional)" name="chronicConditions">
-                        <textarea name="chronicConditions" id="chronicConditions" value={formData.chronicConditions} onChange={handleChange} rows={3} className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-4 py-2" placeholder="e.g., Type 2 Diabetes, high blood pressure..." />
+                     <FormField label={t('healthProfileForm.conditions')} name="chronicConditions">
+                        <textarea name="chronicConditions" id="chronicConditions" value={formData.chronicConditions} onChange={handleChange} rows={3} className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-4 py-2 text-on-surface" placeholder={t('healthProfileForm.conditionsPlaceholder')} />
                     </FormField>
-                    <FormField label="Any known allergies? (Optional)" name="allergies">
-                        <textarea name="allergies" id="allergies" value={formData.allergies} onChange={handleChange} rows={3} className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-4 py-2" placeholder="e.g., Peanuts, penicillin, pollen..." />
+                    <FormField label={t('healthProfileForm.allergies')} name="allergies">
+                        <textarea name="allergies" id="allergies" value={formData.allergies} onChange={handleChange} rows={3} className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-4 py-2 text-on-surface" placeholder={t('healthProfileForm.allergiesPlaceholder')} />
                     </FormField>
-                     <FormField label="Any vitamins or supplements you take regularly? (Optional)" name="supplements">
-                        <textarea name="supplements" id="supplements" value={formData.supplements} onChange={handleChange} rows={3} className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-4 py-2" placeholder="e.g., Vitamin D, fish oil, protein powder..." />
+                     <FormField label={t('healthProfileForm.supplements')} name="supplements">
+                        <textarea name="supplements" id="supplements" value={formData.supplements} onChange={handleChange} rows={3} className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-4 py-2 text-on-surface" placeholder={t('healthProfileForm.supplementsPlaceholder')} />
                     </FormField>
                 </div>
             )}
             
             <div className={`pt-5 flex ${currentStep > 1 || onCancel ? 'justify-between' : 'justify-end'} items-center`}>
                 {currentStep > 1 && (
-                    <Button type="button" onClick={handleBack} variant="secondary" disabled={isSubmitting}>Back</Button>
+                    <Button type="button" onClick={handleBack} variant="secondary" disabled={isSubmitting}>{t('common.back')}</Button>
                 )}
                 {onCancel && currentStep === 1 && (
-                     <Button type="button" onClick={onCancel} variant="secondary" disabled={isSubmitting}>Cancel</Button>
+                     <Button type="button" onClick={onCancel} variant="secondary" disabled={isSubmitting}>{t('common.cancel')}</Button>
                 )}
 
                 {currentStep < steps.length ? (
-                    <Button type="button" onClick={handleNext} disabled={isSubmitting}>Next</Button>
+                    <Button type="button" onClick={handleNext} disabled={isSubmitting}>{t('common.next')}</Button>
                 ) : (
                     <Button type="submit" isLoading={isSubmitting}>{submitButtonText}</Button>
                 )}

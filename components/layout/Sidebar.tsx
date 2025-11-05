@@ -1,16 +1,8 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { ChartBarIcon, DocumentTextIcon, HomeIcon, SparklesIcon, XMarkIcon, UserCircleIcon, ArrowRightOnRectangleIcon, BookOpenIcon, LockClosedIcon } from '../icons/IconComponents';
+import { useTranslation } from 'react-i18next';
+import { ChartBarIcon, DocumentTextIcon, HomeIcon, SparklesIcon, XMarkIcon, UserCircleIcon, ArrowRightOnRectangleIcon, BookOpenIcon, LockClosedIcon, MoonIcon } from '../icons/IconComponents';
 import { useAuth } from '../../contexts/AuthContext';
-
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon, pro: true },
-  { name: 'AI Blood Analysis', href: '/blood-test', icon: DocumentTextIcon, pro: true },
-  { name: 'AI Assistant', href: '/assistant', icon: SparklesIcon, pro: false },
-  { name: 'Biomarkers', href: '/biomarkers', icon: ChartBarIcon, pro: true },
-  { name: 'Articles', href: '/articles', icon: BookOpenIcon, pro: true },
-  { name: 'Profile', href: '/profile', icon: UserCircleIcon, pro: false },
-];
 
 interface SidebarProps {
     isSidebarOpen: boolean;
@@ -18,8 +10,9 @@ interface SidebarProps {
     forceHidden?: boolean;
 }
 
-const NavItem: React.FC<{ item: typeof navigation[0]; isSidebarOpen: boolean; onClick: () => void; }> = ({ item, isSidebarOpen, onClick }) => {
+const NavItem: React.FC<{ item: any; isSidebarOpen: boolean; onClick: () => void; }> = ({ item, isSidebarOpen, onClick }) => {
     const { subscriptionStatus, openUpgradeModal } = useAuth();
+    const { t } = useTranslation();
     const isProFeature = item.pro;
     const isFreeUser = subscriptionStatus === 'free';
 
@@ -27,14 +20,14 @@ const NavItem: React.FC<{ item: typeof navigation[0]; isSidebarOpen: boolean; on
         return (
             <button
                 key={item.name}
-                title={`${item.name} - Pro Feature`}
+                title={t('sidebar.proFeature', { name: item.name })}
                 onClick={openUpgradeModal}
                 className={`group relative flex items-center w-full px-3 py-3 text-sm font-semibold rounded-lg transition-all duration-200 text-on-surface-variant/80 hover:bg-gray-100 hover:text-on-surface ${!isSidebarOpen && 'justify-center'}`}
             >
                 <item.icon className="flex-shrink-0 h-6 w-6" />
                 <span className={`whitespace-nowrap ${isSidebarOpen ? 'ml-4' : 'hidden'}`}>{item.name}</span>
                 {isSidebarOpen && (
-                    <span className="ml-auto text-xs font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">PRO</span>
+                    <span className="ml-auto text-xs font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">{t('common.pro')}</span>
                 )}
             </button>
         );
@@ -67,6 +60,17 @@ const NavItem: React.FC<{ item: typeof navigation[0]; isSidebarOpen: boolean; on
 const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setIsSidebarOpen, forceHidden = false }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
+
+  const navigation = [
+    { name: t('sidebar.dashboard'), href: '/dashboard', icon: HomeIcon, pro: true },
+    { name: t('sidebar.bloodAnalysis'), href: '/blood-test', icon: DocumentTextIcon, pro: true },
+    { name: t('sidebar.mindfulMoments'), href: '/mindful-moments', icon: MoonIcon, pro: true },
+    { name: t('sidebar.aiAssistant'), href: '/assistant', icon: SparklesIcon, pro: false },
+    { name: t('sidebar.biomarkers'), href: '/biomarkers', icon: ChartBarIcon, pro: true },
+    { name: t('sidebar.articles'), href: '/articles', icon: BookOpenIcon, pro: true },
+    { name: t('sidebar.profile'), href: '/profile', icon: UserCircleIcon, pro: false },
+  ];
 
   const handleLogout = () => {
     logout();
@@ -81,14 +85,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setIsSidebarOpen, forc
 
   return (
     <>
-        {/* Mobile Overlay, shown on < md screens */}
         <div
             className={`fixed inset-0 bg-black bg-opacity-50 z-20 transition-opacity md:hidden ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
             onClick={() => setIsSidebarOpen(false)}
             aria-hidden="true"
         />
 
-        {/* Sidebar */}
         <aside className={`fixed top-0 left-0 h-full bg-surface/80 backdrop-blur-lg flex flex-col z-30 transition-all duration-300 ease-in-out border-r border-gray-200/80 overflow-hidden w-64
             ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
             md:translate-x-0 
@@ -103,7 +105,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setIsSidebarOpen, forc
                         </h1>
                     </div>
                     <p className="text-xs text-on-surface-variant mt-1 text-center whitespace-nowrap">
-                        Get Your health in Order
+                        {t('header.subtitle')}
                     </p>
                 </div>
             </div>
@@ -130,7 +132,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setIsSidebarOpen, forc
                     className="w-full group flex items-center justify-center px-3 py-2 text-sm font-semibold rounded-lg text-on-surface-variant bg-gray-100 hover:bg-gray-200 hover:text-on-surface transition-all duration-200"
                 >
                     <ArrowRightOnRectangleIcon className="mr-2 h-5 w-5"/>
-                    <span>Logout</span>
+                    <span>{t('sidebar.logout')}</span>
                 </button>
             </div>
         </aside>

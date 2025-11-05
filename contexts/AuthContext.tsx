@@ -1,8 +1,15 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import type { User, HealthProfile } from '../types';
+// FIX: Use Firebase v8 compat imports
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/auth';
+import { auth, googleProvider } from '../services/firebase';
 import { apiService } from '../services/apiService';
+import type { User, HealthProfile } from '../types';
 
 type SubscriptionStatus = 'free' | 'pro';
+
+// FIX: Define Firebase user type using v8 style. It should be firebase.User
+type FirebaseUser = firebase.User;
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -10,15 +17,15 @@ interface AuthContextType {
   subscriptionStatus: SubscriptionStatus;
   isUpgradeModalOpen: boolean;
   isProfileComplete: boolean;
-  isBackendConfigured: boolean;
   isInitializing: boolean;
   login: (email: string, a: string) => Promise<void>;
+  register: (name: string, email: string, a: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => void;
   upgradeToPro: () => void;
   openUpgradeModal: () => void;
   closeUpgradeModal: () => void;
   updateHealthProfile: (profile: HealthProfile) => Promise<void>;
-  configureBackend: (url: string) => void;
 }
 
 const MOCK_USER_BASE: Omit<User, 'healthProfile'> = {
@@ -35,82 +42,89 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus>('pro');
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isProfileComplete, setIsProfileComplete] = useState<boolean>(false);
-  const [isBackendConfigured, setIsBackendConfigured] = useState<boolean>(false);
-  const [authToken, setAuthToken] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
-    const initializeApp = async () => {
+    let unsubscribe: (() => void) | undefined;
+
+    const setupAuthListener = async () => {
       try {
-        const storedBackendUrl = localStorage.getItem('everliv_backend_url');
-        const storedToken = localStorage.getItem('everliv_auth_token');
-
-        if (storedBackendUrl) {
-          apiService.setBackendUrl(storedBackendUrl);
-          setIsBackendConfigured(true);
-        }
-
-        if (storedBackendUrl && storedToken) {
-          setAuthToken(storedToken);
-          apiService.setAuthToken(storedToken);
-          
-          // Verify token by fetching user profile
-          const userProfile = await apiService.getProfile();
-          if (userProfile) {
-            setUser({ ...MOCK_USER_BASE, healthProfile: userProfile });
-            setIsProfileComplete(!!userProfile.age);
-            setIsAuthenticated(true);
-             // TODO: Fetch subscription status from backend
-            setSubscriptionStatus('pro');
-          } else {
-             // Token is invalid, clear it
-            logout();
-          }
-        }
+        // FIX: Use firebase.auth.Auth.Persistence.SESSION for v8 compat
+        await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
       } catch (error) {
-        console.error("Initialization failed:", error);
-        // If profile fetch fails, treat as logged out
-        logout();
-      } finally {
-        setIsInitializing(false);
+        console.error("Firebase auth persistence error:", error);
       }
+
+      unsubscribe = auth.onAuthStateChanged(async (firebaseUser: FirebaseUser | null) => {
+        try {
+            if (firebaseUser) {
+                // Set auth status immediately to prevent race conditions on redirect
+                setIsAuthenticated(true);
+                setSubscriptionStatus('pro');
+
+                const userProfile = await apiService.getProfile();
+                setUser({
+                    name: firebaseUser.displayName || 'User',
+                    email: firebaseUser.email || '',
+                    avatarUrl: firebaseUser.photoURL || `https://i.pravatar.cc/150?u=${firebaseUser.uid}`,
+                    healthProfile: userProfile,
+                });
+                setIsProfileComplete(!!userProfile?.age);
+            } else {
+                setUser({ ...MOCK_USER_BASE, healthProfile: undefined });
+                setIsAuthenticated(false);
+                setIsProfileComplete(false);
+            }
+        } catch (error) {
+            console.error("Auth state change error, failed to fetch profile:", error);
+            // Fallback state in case of an error (e.g., Firestore rules issue).
+            // Log the user out to be safe and ensure a clean state.
+            if (firebaseUser) {
+                await auth.signOut().catch(e => console.error("Sign out failed after auth error:", e));
+            }
+            setUser({ ...MOCK_USER_BASE, healthProfile: undefined });
+            setIsAuthenticated(false);
+            setIsProfileComplete(false);
+        } finally {
+            // This is crucial to prevent the app from being stuck in a loading state.
+            setIsInitializing(false);
+        }
+      });
     };
 
-    initializeApp();
+    setupAuthListener();
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
-    console.log(`Attempting login for ${email}`);
-    const { token } = await apiService.login(email, password);
-    if (token) {
-        localStorage.setItem('everliv_auth_token', token);
-        setAuthToken(token);
-        apiService.setAuthToken(token);
-
-        const userProfile = await apiService.getProfile();
-        setUser({ ...MOCK_USER_BASE, healthProfile: userProfile });
-        setIsProfileComplete(!!userProfile?.age);
-        setIsAuthenticated(true);
-        // In a real app, this would come from the backend user profile
-        setSubscriptionStatus('pro'); 
-        localStorage.setItem('everliv_subscription', JSON.stringify('pro'));
-    } else {
-        throw new Error("Login failed: Invalid credentials");
-    }
+    await auth.signInWithEmailAndPassword(email, password);
   };
 
-  const logout = () => {
-    setIsAuthenticated(false);
-    setAuthToken(null);
-    apiService.setAuthToken(null);
-    localStorage.removeItem('everliv_auth_token');
-    localStorage.removeItem('everliv_subscription');
+  const register = async (name: string, email: string, password: string) => {
+      const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+      if (userCredential.user) {
+        await userCredential.user.updateProfile({
+            displayName: name,
+            photoURL: `https://i.pravatar.cc/150?u=${userCredential.user.uid}`
+        });
+      }
+  };
+
+  const loginWithGoogle = async () => {
+      await auth.signInWithPopup(googleProvider);
+  };
+
+  const logout = async () => {
+    await auth.signOut();
   };
   
   const upgradeToPro = () => {
     setSubscriptionStatus('pro');
-    localStorage.setItem('everliv_subscription', JSON.stringify('pro'));
-    // In a real app, this would be an API call to the backend
   };
 
   const openUpgradeModal = () => setIsUpgradeModalOpen(true);
@@ -121,18 +135,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(prev => ({ ...prev, healthProfile: updatedProfile }));
     setIsProfileComplete(!!updatedProfile.age);
   };
-  
-  const configureBackend = (url: string) => {
-    apiService.setBackendUrl(url);
-    localStorage.setItem('everliv_backend_url', url);
-    setIsBackendConfigured(true);
-  };
 
   return (
     <AuthContext.Provider value={{ 
         isAuthenticated, 
         user, 
-        login, 
+        login,
+        register,
+        loginWithGoogle,
         logout,
         subscriptionStatus,
         upgradeToPro,
@@ -141,9 +151,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         closeUpgradeModal,
         isProfileComplete,
         updateHealthProfile,
-        isBackendConfigured,
         isInitializing,
-        configureBackend,
     }}>
       {children}
     </AuthContext.Provider>

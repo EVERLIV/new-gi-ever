@@ -53,7 +53,7 @@ const BackendSetupModal: React.FC<BackendSetupModalProps> = ({ onSave }) => {
                                     required
                                     value={url}
                                     onChange={(e) => setUrl(e.target.value)}
-                                    className="block w-full px-4 py-2.5 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                                    className="block w-full px-4 py-2.5 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm text-on-surface"
                                     placeholder="https://your-api-gateway-id.apigateway.yandexcloud.net"
                                 />
                             </div>

@@ -1,5 +1,5 @@
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { analyzeBloodTest, createChatWithContext } from '../services/geminiService';
 import { apiService } from '../services/apiService';
 import type { ChatMessage, Biomarker, BloodTestAnalysis } from '../types';
@@ -86,6 +86,7 @@ const ChatMessageBubble: React.FC<{ message: ChatMessage; searchQuery?: string }
 
 const AssistantPage: React.FC = () => {
     const { user } = useAuth();
+    const { t } = useTranslation();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -104,13 +105,12 @@ const AssistantPage: React.FC = () => {
     useEffect(() => {
         const initializeChat = async () => {
             try {
-                // Load chat history and biomarkers from API
                 const [chatHistory, biomarkers] = await Promise.all([
                     apiService.getChatHistory(),
                     apiService.getBiomarkers()
                 ]);
 
-                const initialMessages = chatHistory.length > 0 ? chatHistory : [{ sender: MessageSender.AI, text: "Hello! I'm your AI Health Assistant. I can now analyze blood test reports directly from our chat. How can I help you today?" }];
+                const initialMessages = chatHistory.length > 0 ? chatHistory : [{ sender: MessageSender.AI, text: t('assistant.initialMessage') }];
                 setMessages(initialMessages);
 
                 chatRef.current = createChatWithContext(user, biomarkers);
@@ -119,23 +119,22 @@ const AssistantPage: React.FC = () => {
                 setMessages([{ sender: MessageSender.AI, text: "Sorry, I'm having trouble connecting. Please try again later." }]);
             }
 
-            // Initialize Speech Recognition
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (SpeechRecognition) {
                 recognitionRef.current = new SpeechRecognition();
                 recognitionRef.current.continuous = true;
                 recognitionRef.current.interimResults = true;
+                recognitionRef.current.lang = 'ru-RU';
                 recognitionRef.current.onresult = (event: any) => {
-                    let interimTranscript = '';
                     let finalTranscript = '';
                     for (let i = event.resultIndex; i < event.results.length; ++i) {
                         if (event.results[i].isFinal) {
                             finalTranscript += event.results[i][0].transcript;
-                        } else {
-                            interimTranscript += event.results[i][0].transcript;
                         }
                     }
-                    setInput(input + finalTranscript + interimTranscript);
+                     if (finalTranscript) {
+                        setInput(currentInput => (currentInput + ' ' + finalTranscript).trim());
+                    }
                 };
             }
             setIsInitialized(true);
@@ -144,10 +143,9 @@ const AssistantPage: React.FC = () => {
         initializeChat();
 
         return () => { if (recognitionRef.current) recognitionRef.current.stop(); };
-    }, [user]);
+    }, [user, t]);
 
     useEffect(() => {
-        // Debounced save to API
         const handler = setTimeout(() => {
              if (isInitialized && messages.length > 0) {
                 apiService.saveChatHistory(messages);
@@ -171,23 +169,23 @@ const AssistantPage: React.FC = () => {
         }
     }, [input]);
 
-    const formatAnalysisForChat = (analysis: BloodTestAnalysis): string => {
+    const formatAnalysisForChat = useCallback((analysis: BloodTestAnalysis): string => {
         const buttonClasses = "inline-flex items-center justify-center px-4 py-2 mt-4 border border-transparent text-sm font-semibold rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 bg-primary text-white hover:bg-primary-dark focus:ring-primary disabled:opacity-60";
         const biomarkersList = analysis.biomarkers.map(b => 
             `<li class="py-1"><strong>${b.name}:</strong> ${b.value} ${b.unit} <span class="text-xs capitalize">(${b.status})</span></li>`
         ).join('');
 
         return `
-            <p>I've analyzed your blood test report. Here's a summary:</p>
+            <p>Я проанализировал ваш отчет об анализе крови. Вот краткое изложение:</p>
             <div class="mt-2 p-3 bg-white rounded-md">
-                <p><strong>AI Summary:</strong> ${analysis.summary}</p>
-                <strong class="block mt-3">Key Biomarkers:</strong>
+                <p><strong>Резюме от ИИ:</strong> ${analysis.summary}</p>
+                <strong class="block mt-3">Ключевые биомаркеры:</strong>
                 <ul class="list-disc list-inside mt-1">${biomarkersList}</ul>
             </div>
-            <p class="mt-3">Would you like to save these results to your biomarker history?</p>
-            <button id="save-analysis-btn" class="${buttonClasses}">Save Results</button>
+            <p class="mt-3">Хотите сохранить эти результаты в свою историю биомаркеров?</p>
+            <button id="save-analysis-btn" class="${buttonClasses}">${t('assistant.saveAnalysis')}</button>
         `;
-    };
+    }, [t]);
 
     const handleSaveResults = useCallback(async () => {
         const analysis = latestAnalysisRef.current;
@@ -198,27 +196,27 @@ const AssistantPage: React.FC = () => {
             
             const saveButton = document.getElementById('save-analysis-btn');
             if (saveButton) {
-                saveButton.id = ''; // Prevent future clicks
+                saveButton.id = ''; 
                 (saveButton as HTMLButtonElement).disabled = true;
-                saveButton.innerHTML = `✅ Results Saved!`;
+                saveButton.innerHTML = t('assistant.savedAnalysis');
             }
 
         } catch (e) {
             console.error("Failed to save biomarkers:", e);
             const saveButton = document.getElementById('save-analysis-btn');
             if (saveButton) {
-                saveButton.textContent = 'Error Saving';
+                saveButton.textContent = t('common.error');
             }
         }
-    }, []);
+    }, [t]);
 
     const handleBloodTestAnalysis = useCallback(async (file: File | undefined) => {
         if (!file) {
-            setMessages(prev => [...prev.slice(0, -2), { sender: MessageSender.AI, text: "Sorry, you need to attach an image for analysis." }]);
+            setMessages(prev => [...prev.slice(0, -2), { sender: MessageSender.AI, text: "Извините, для анализа нужно прикрепить изображение." }]);
             return;
         }
 
-        setMessages(prev => [...prev.slice(0, -2), { sender: MessageSender.AI, text: "Understood. Analyzing your blood test report now..." }]);
+        setMessages(prev => [...prev.slice(0, -2), { sender: MessageSender.AI, text: t('assistant.analysisMessage') }]);
         
         try {
             const base64Image = await fileToBase64(file);
@@ -233,11 +231,11 @@ const AssistantPage: React.FC = () => {
         } catch (error) {
             setMessages(prev => {
                 const newMessages = [...prev];
-                newMessages[newMessages.length - 1].text = "I'm sorry, I was unable to analyze that report. Please ensure it's a clear image of a blood test result and try again.";
+                newMessages[newMessages.length - 1].text = t('assistant.analysisError');
                 return newMessages;
             });
         }
-    }, [formatAnalysisForChat]);
+    }, [formatAnalysisForChat, t]);
 
     useEffect(() => {
         const chatContainer = document.getElementById('chat-container');
@@ -245,7 +243,7 @@ const AssistantPage: React.FC = () => {
         const handleChatClick = (event: MouseEvent) => {
             const target = event.target as HTMLElement;
             if (target.id === 'save-analysis-btn') {
-                target.textContent = 'Saving...';
+                target.textContent = t('assistant.savingAnalysis');
                 target.setAttribute('disabled', 'true');
                 handleSaveResults();
             }
@@ -253,7 +251,7 @@ const AssistantPage: React.FC = () => {
 
         chatContainer?.addEventListener('click', handleChatClick);
         return () => chatContainer?.removeEventListener('click', handleChatClick);
-    }, [handleSaveResults]);
+    }, [handleSaveResults, t]);
 
     const handleSend = useCallback(async () => {
         if ((!input.trim() && !selectedImage) || isLoading) return;
@@ -304,14 +302,14 @@ const AssistantPage: React.FC = () => {
                 const newMessages = [...prev];
                 const lastMessage = newMessages[newMessages.length - 1];
                 if (lastMessage?.sender === MessageSender.AI) {
-                    lastMessage.text = "I'm sorry, I encountered an error. Please try again.";
+                    lastMessage.text = t('assistant.generalError');
                 }
                 return newMessages;
             });
         } finally {
             setIsLoading(false);
         }
-    }, [input, isLoading, selectedImage, handleBloodTestAnalysis]);
+    }, [input, isLoading, selectedImage, handleBloodTestAnalysis, t]);
 
     const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -348,8 +346,8 @@ const AssistantPage: React.FC = () => {
                         type="search"
                         name="search"
                         id="search"
-                        className="block w-full rounded-xl border-gray-300 pl-10 shadow-sm focus:border-primary focus:ring-primary sm:text-sm py-2 bg-surface"
-                        placeholder="Search chat history..."
+                        className="block w-full rounded-xl border-gray-300 pl-10 shadow-sm focus:border-primary focus:ring-primary sm:text-sm py-2 bg-surface text-on-surface"
+                        placeholder={t('assistant.searchPlaceholder')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -357,7 +355,7 @@ const AssistantPage: React.FC = () => {
                         <button
                             onClick={() => setSearchQuery('')}
                             className="absolute inset-y-0 right-0 flex items-center pr-3"
-                            aria-label="Clear search"
+                            aria-label={t('assistant.clearSearch')}
                         >
                             <XMarkIcon className="h-5 w-5 text-on-surface-variant hover:text-on-surface" />
                         </button>
@@ -373,8 +371,8 @@ const AssistantPage: React.FC = () => {
                         searchQuery && (
                             <div className="text-center py-10 text-on-surface-variant">
                                 <MagnifyingGlassIcon className="mx-auto h-12 w-12 opacity-50" />
-                                <p className="mt-4 font-semibold">No results found for "{searchQuery}"</p>
-                                <p className="text-sm">Try searching for a different term.</p>
+                                <p className="mt-4 font-semibold">{t('assistant.noResults', { query: searchQuery })}</p>
+                                <p className="text-sm">{t('assistant.noResultsHint')}</p>
                             </div>
                         )
                     )}
@@ -399,26 +397,26 @@ const AssistantPage: React.FC = () => {
                 <div className="bg-surface rounded-xl shadow-soft border border-gray-200/60 flex items-center p-2 gap-2">
                     <input type="file" ref={fileInputRef} onChange={handleImageSelect} className="hidden" accept="image/*" />
                     <button 
-                        title="Attach image"
+                        title={t('assistant.attachImage')}
                         onClick={() => fileInputRef.current?.click()} 
                         disabled={isLoading} 
                         className="p-2 rounded-full text-on-surface-variant hover:bg-gray-100 transition-colors disabled:opacity-50 flex-shrink-0"
-                        aria-label="Attach image">
+                        aria-label={t('assistant.attachImage')}>
                         <PaperClipIcon className="h-6 w-6" />
                     </button>
                     <button 
-                        title={isRecording ? 'Stop recording' : 'Start recording'}
+                        title={isRecording ? t('assistant.stopRecording') : t('assistant.startRecording')}
                         onClick={toggleRecording} 
                         disabled={isLoading} 
                         className={`p-2 rounded-full transition-colors disabled:opacity-50 flex-shrink-0 ${isRecording ? 'text-red-500 bg-red-100' : 'text-on-surface-variant hover:bg-gray-100'}`} 
-                        aria-label={isRecording ? 'Stop recording' : 'Start recording'}>
+                        aria-label={isRecording ? t('assistant.stopRecording') : t('assistant.startRecording')}>
                         {isRecording ? <StopCircleIcon className="h-6 w-6"/> : <MicrophoneIcon className="h-6 w-6" />}
                     </button>
                     <textarea
                         ref={textareaRef}
                         rows={1}
-                        className="flex-1 block w-full bg-transparent resize-none max-h-40 p-1 border-0 focus:ring-0 sm:text-sm placeholder-on-surface-variant"
-                        placeholder={isRecording ? "Listening..." : "Ask me anything..."}
+                        className="flex-1 block w-full bg-transparent resize-none max-h-40 p-1 border-0 focus:ring-0 sm:text-sm placeholder-on-surface-variant text-on-surface"
+                        placeholder={isRecording ? t('assistant.listening') : t('assistant.inputPlaceholder')}
                         value={input}
                         onChange={(e) => setInput(e.target.value.slice(0, MAX_CHARS))}
                         onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }}}
@@ -429,14 +427,14 @@ const AssistantPage: React.FC = () => {
                         isLoading={isLoading} 
                         disabled={(!input.trim() && !selectedImage) || !isInitialized} 
                         className="h-10 w-10 p-0 flex-shrink-0 rounded-lg" 
-                        aria-label="Send message"
-                        title="Send message">
+                        aria-label={t('assistant.sendMessage')}
+                        title={t('assistant.sendMessage')}>
                        {!isLoading && <PaperAirplaneIcon className="h-5 w-5" />}
                     </Button>
                 </div>
                 {selectedImage && (
                     <div className="text-xs text-on-surface-variant mt-2 px-2 flex justify-between items-center">
-                       <span>Image attached: <span className="font-medium text-on-surface">{selectedImage.file.name}</span></span>
+                       <span>{t('assistant.imageAttached')} <span className="font-medium text-on-surface">{selectedImage.file.name}</span></span>
                        <button onClick={() => setSelectedImage(null)} className="p-1 rounded-full hover:bg-red-100">
                            <XMarkIcon className="h-4 w-4 text-red-600" />
                        </button>

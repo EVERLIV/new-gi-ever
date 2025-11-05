@@ -1,8 +1,7 @@
-
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, useParams, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import type { Biomarker, BiomarkerAlert, BloodTestRecord } from '../types';
 import { apiService } from '../services/apiService';
 import Card from '../components/ui/Card';
@@ -55,7 +54,7 @@ const HistoryLineChart: React.FC<{
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
     if (!history || history.length < 2) {
-        return <div className="h-40 flex items-center justify-center text-sm text-on-surface-variant">Not enough data for a chart.</div>;
+        return <div className="h-40 flex items-center justify-center text-sm text-on-surface-variant">Недостаточно данных для графика.</div>;
     }
 
     const width = 300;
@@ -139,6 +138,7 @@ const HistoryLineChart: React.FC<{
 };
 
 const TestResultModal: React.FC<{ testRecord: BloodTestRecord; onClose: () => void }> = ({ testRecord, onClose }) => {
+    const { t } = useTranslation();
     const analysis = testRecord.analysis;
     const statusPillColors = {
         normal: 'bg-green-100 text-green-800',
@@ -152,20 +152,20 @@ const TestResultModal: React.FC<{ testRecord: BloodTestRecord; onClose: () => vo
           <div className="bg-surface rounded-2xl shadow-soft-lg w-full max-w-2xl m-4 transform animate-scaleIn" role="document" onClick={e => e.stopPropagation()}>
             <div className="p-6 border-b border-gray-200 flex justify-between items-center">
                 <div>
-                    <h3 className="text-lg font-semibold text-on-surface">Source Blood Test</h3>
-                    <p className="text-sm text-on-surface-variant">Analysis from {new Date(testRecord.date).toLocaleString()}</p>
+                    <h3 className="text-lg font-semibold text-on-surface">{t('biomarkers.sourceTest')}</h3>
+                    <p className="text-sm text-on-surface-variant">{t('biomarkers.sourceTestDate', { date: new Date(testRecord.date).toLocaleString() })}</p>
                 </div>
-                <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-200" aria-label="Close">
+                <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-200" aria-label={t('common.close')}>
                     <XMarkIcon className="h-6 w-6 text-on-surface-variant" />
                 </button>
             </div>
             <div className="p-6 max-h-[70vh] overflow-y-auto space-y-4">
                  <div>
-                    <h4 className="font-semibold text-on-surface">AI Summary</h4>
+                    <h4 className="font-semibold text-on-surface">{t('bloodTest.summary')}</h4>
                     <p className="mt-1 text-sm text-on-surface-variant bg-gray-50 p-3 rounded-lg">{analysis.summary}</p>
                  </div>
                  <div>
-                    <h4 className="font-semibold text-on-surface">Biomarkers from this Test</h4>
+                    <h4 className="font-semibold text-on-surface">{t('biomarkers.biomarkersFromTest')}</h4>
                     <ul className="mt-2 space-y-2">
                         {analysis.biomarkers.map((marker, index) => (
                             <li key={index} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
@@ -173,14 +173,14 @@ const TestResultModal: React.FC<{ testRecord: BloodTestRecord; onClose: () => vo
                                     <p className="font-semibold text-on-surface">{marker.name}</p>
                                     <span className={`px-2 py-0.5 text-xs font-medium rounded-full capitalize ${statusPillColors[marker.status]}`}>{marker.status}</span>
                                 </div>
-                                <p className="text-sm text-on-surface-variant">{marker.value} {marker.unit} <span className="text-xs">(Range: {marker.range})</span></p>
+                                <p className="text-sm text-on-surface-variant">{marker.value} {marker.unit} <span className="text-xs">({t('biomarkers.detail.normalRange')} {marker.range})</span></p>
                                 <p className="text-xs text-gray-500 mt-1">{marker.explanation}</p>
                             </li>
                         ))}
                     </ul>
                  </div>
                  <div>
-                    <h4 className="font-semibold text-on-surface flex items-center"><LightBulbIcon className="h-5 w-5 mr-2 text-yellow-500" />Recommendations from this Test</h4>
+                    <h4 className="font-semibold text-on-surface flex items-center"><LightBulbIcon className="h-5 w-5 mr-2 text-yellow-500" />{t('bloodTest.recommendations')}</h4>
                      <ul className="mt-1 text-sm text-on-surface-variant list-disc list-inside bg-gray-50 p-3 rounded-lg">
                         {analysis.recommendations.map((rec, i) => <li key={i}>{rec}</li>)}
                     </ul>
@@ -213,7 +213,7 @@ const BiomarkerDetailView: React.FC<{
     isTriggered: boolean;
     onViewTest: (testId: string) => void;
 }> = ({ biomarker, setTooltip, alertConfig, onSaveAlert, isTriggered, onViewTest }) => {
-    
+    const { t } = useTranslation();
     const [localAlert, setLocalAlert] = useState<BiomarkerAlert>(alertConfig);
     const [isSavingAlert, setIsSavingAlert] = useState(false);
 
@@ -231,7 +231,6 @@ const BiomarkerDetailView: React.FC<{
             await onSaveAlert(localAlert);
         } catch (error) {
             console.error("Failed to save alert:", error);
-            // Optionally show an error message to the user
         } finally {
             setIsSavingAlert(false);
         }
@@ -247,21 +246,20 @@ const BiomarkerDetailView: React.FC<{
     return (
         <div className="animate-fadeIn">
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                {/* Left Column */}
                 <div className="lg:col-span-2 space-y-6">
                     <Card>
                         <div className="space-y-4">
                             <div>
-                                <p className="text-sm font-medium text-on-surface-variant">Current Value</p>
+                                <p className="text-sm font-medium text-on-surface-variant">{t('biomarkers.detail.currentValue')}</p>
                                 <p className="mt-1 text-4xl font-bold text-on-surface">
                                     {biomarker.value} <span className="text-xl font-medium text-on-surface-variant">{biomarker.unit}</span>
                                 </p>
                                 <span className={`mt-2 inline-block px-2.5 py-1 text-xs font-semibold rounded-full capitalize ${statusPillColors[biomarker.status]}`}>{biomarker.status}</span>
                             </div>
                             <div>
-                                <h4 className="font-semibold text-on-surface">About this biomarker</h4>
+                                <h4 className="font-semibold text-on-surface">{t('biomarkers.detail.about')}</h4>
                                 <p className="text-sm text-on-surface-variant mt-1">{biomarker.description}</p>
-                                <p className="text-sm text-on-surface-variant mt-2"><span className="font-medium text-on-surface">Normal Range:</span> {biomarker.range}</p>
+                                <p className="text-sm text-on-surface-variant mt-2"><span className="font-medium text-on-surface">{t('biomarkers.detail.normalRange')}</span> {biomarker.range}</p>
                             </div>
                         </div>
                     </Card>
@@ -274,7 +272,7 @@ const BiomarkerDetailView: React.FC<{
                               </div>
                               <div className="ml-3">
                                   <p className="text-sm font-semibold text-accent-dark">
-                                      Alert: Current value ({biomarker.value} {biomarker.unit}) is outside your custom range.
+                                      {t('biomarkers.detail.alertTriggered', { value: biomarker.value, unit: biomarker.unit })}
                                   </p>
                               </div>
                           </div>
@@ -284,8 +282,8 @@ const BiomarkerDetailView: React.FC<{
                     <Card>
                          <div className="flex items-center justify-between">
                             <div>
-                                <h4 className="font-semibold text-on-surface">Custom Alerts</h4>
-                                <p className="text-sm text-on-surface-variant">Get notified when values are out of range.</p>
+                                <h4 className="font-semibold text-on-surface">{t('biomarkers.detail.alerts')}</h4>
+                                <p className="text-sm text-on-surface-variant">{t('biomarkers.detail.alertsSubtitle')}</p>
                             </div>
                             <label className="relative inline-flex items-center cursor-pointer">
                               <input type="checkbox" id="alert-enabled" className="sr-only peer" checked={localAlert.enabled} onChange={e => handleAlertChange('enabled', e.target.checked)} />
@@ -296,16 +294,16 @@ const BiomarkerDetailView: React.FC<{
                         <div className={`transition-all duration-300 ease-in-out overflow-hidden ${localAlert.enabled ? 'max-h-96 mt-4' : 'max-h-0 mt-0'}`}>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label htmlFor="threshold-below" className="block text-sm font-medium text-on-surface-variant">Alert if below</label>
+                                    <label htmlFor="threshold-below" className="block text-sm font-medium text-on-surface-variant">{t('biomarkers.detail.alertIfBelow')}</label>
                                     <div className="mt-1 relative rounded-md shadow-sm">
-                                        <input type="number" id="threshold-below" value={localAlert.thresholdBelow ?? ''} onChange={e => handleAlertChange('thresholdBelow', e.target.value === '' ? undefined : parseFloat(e.target.value))} className="block w-full rounded-lg border-gray-300 focus:border-primary focus:ring-primary sm:text-sm px-3 py-2 pr-16" placeholder={`e.g., ${biomarker.range.split('-')[0].trim()}`} />
+                                        <input type="number" id="threshold-below" value={localAlert.thresholdBelow ?? ''} onChange={e => handleAlertChange('thresholdBelow', e.target.value === '' ? undefined : parseFloat(e.target.value))} className="block w-full rounded-lg border-gray-300 focus:border-primary focus:ring-primary sm:text-sm px-3 py-2 pr-16 text-on-surface" placeholder={`e.g., ${biomarker.range.split('-')[0].trim()}`} />
                                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"><span className="text-gray-500 sm:text-sm">{biomarker.unit}</span></div>
                                     </div>
                                 </div>
                                 <div>
-                                    <label htmlFor="threshold-above" className="block text-sm font-medium text-on-surface-variant">Alert if above</label>
+                                    <label htmlFor="threshold-above" className="block text-sm font-medium text-on-surface-variant">{t('biomarkers.detail.alertIfAbove')}</label>
                                     <div className="mt-1 relative rounded-md shadow-sm">
-                                        <input type="number" id="threshold-above" value={localAlert.thresholdAbove ?? ''} onChange={e => handleAlertChange('thresholdAbove', e.target.value === '' ? undefined : parseFloat(e.target.value))} className="block w-full rounded-lg border-gray-300 focus:border-primary focus:ring-primary sm:text-sm px-3 py-2 pr-16" placeholder={`e.g., ${biomarker.range.split('-')[1]?.trim() || '200'}`} />
+                                        <input type="number" id="threshold-above" value={localAlert.thresholdAbove ?? ''} onChange={e => handleAlertChange('thresholdAbove', e.target.value === '' ? undefined : parseFloat(e.target.value))} className="block w-full rounded-lg border-gray-300 focus:border-primary focus:ring-primary sm:text-sm px-3 py-2 pr-16 text-on-surface" placeholder={`e.g., ${biomarker.range.split('-')[1]?.trim() || '200'}`} />
                                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"><span className="text-gray-500 sm:text-sm">{biomarker.unit}</span></div>
                                     </div>
                                 </div>
@@ -313,14 +311,14 @@ const BiomarkerDetailView: React.FC<{
                             
                             {JSON.stringify(localAlert) !== JSON.stringify(alertConfig) && (
                                 <div className="mt-4 flex justify-end">
-                                    <Button onClick={handleAlertSave} isLoading={isSavingAlert} className="px-4 py-2 text-sm">Save Alert Changes</Button>
+                                    <Button onClick={handleAlertSave} isLoading={isSavingAlert} className="px-4 py-2 text-sm">{t('common.saveChanges')}</Button>
                                 </div>
                             )}
                         </div>
                     </Card>
                     
                     <Card>
-                        <h4 className="font-semibold text-on-surface flex items-center"><ClockIcon className="h-5 w-5 mr-2 text-primary" /> Measurement History</h4>
+                        <h4 className="font-semibold text-on-surface flex items-center"><ClockIcon className="h-5 w-5 mr-2 text-primary" /> {t('biomarkers.detail.history')}</h4>
                          <div className="mt-2 max-h-60 overflow-y-auto pr-2">
                             <table className="w-full text-sm text-left">
                                 <thead className="sr-only">
@@ -344,13 +342,11 @@ const BiomarkerDetailView: React.FC<{
                             </table>
                         </div>
                     </Card>
-
                 </div>
 
-                {/* Right Column */}
                 <div className="lg:col-span-3 space-y-6">
                     <Card>
-                        <h4 className="font-semibold text-on-surface">Recent History</h4>
+                        <h4 className="font-semibold text-on-surface">{t('biomarkers.detail.recentHistory')}</h4>
                         <div className="mt-2">
                            <HistoryLineChart history={biomarker.history} unit={biomarker.unit} setTooltip={setTooltip} />
                         </div>
@@ -360,18 +356,18 @@ const BiomarkerDetailView: React.FC<{
                         <Card>
                             <h4 className="text-lg font-bold text-on-surface flex items-center mb-4">
                                 <SparklesIcon className="h-6 w-6 mr-2 text-primary" />
-                                AI Action Plan
+                                {t('biomarkers.detail.aiActionPlan')}
                             </h4>
                             <div className="space-y-6 text-sm">
-                                <RecommendationSection title="Nutrition" items={biomarker.recommendations.nutrition} icon={<ClipboardDocumentListIcon className="h-5 w-5 text-primary" />} />
-                                <RecommendationSection title="Lifestyle" items={biomarker.recommendations.lifestyle} icon={<BoltIcon className="h-5 w-5 text-primary" />} />
-                                <RecommendationSection title="Supplements" items={biomarker.recommendations.supplements} icon={<CubeIcon className="h-5 w-5 text-primary" />} />
+                                <RecommendationSection title={t('biomarkers.detail.nutrition')} items={biomarker.recommendations.nutrition} icon={<ClipboardDocumentListIcon className="h-5 w-5 text-primary" />} />
+                                <RecommendationSection title={t('biomarkers.detail.lifestyle')} items={biomarker.recommendations.lifestyle} icon={<BoltIcon className="h-5 w-5 text-primary" />} />
+                                <RecommendationSection title={t('biomarkers.detail.supplements')} items={biomarker.recommendations.supplements} icon={<CubeIcon className="h-5 w-5 text-primary" />} />
                                 <div>
                                     <h5 className="font-semibold text-on-surface flex items-center">
                                         <span className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mr-3">
                                             <CalendarDaysIcon className="h-5 w-5 text-primary" />
                                         </span>
-                                        Next Recommended Analysis
+                                        {t('biomarkers.detail.nextAnalysis')}
                                     </h5>
                                     <p className="mt-2 pl-11 text-on-surface-variant">{biomarker.recommendations.next_checkup}</p>
                                 </div>
@@ -385,22 +381,22 @@ const BiomarkerDetailView: React.FC<{
 };
 
 function formatDistanceToNow(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-  if (seconds < 5) return 'Just now';
-  let interval = seconds / 31536000;
-  if (interval > 1) return Math.floor(interval) + ' years ago';
-  interval = seconds / 2592000;
-  if (interval > 1) return Math.floor(interval) + ' months ago';
-  interval = seconds / 86400;
-  if (interval > 1) return Math.floor(interval) + ' days ago';
-  interval = seconds / 3600;
-  if (interval > 1) return Math.floor(interval) + ' hours ago';
-  interval = seconds / 60;
-  if (interval > 1) return Math.floor(interval) + ' minutes ago';
-  return Math.floor(seconds) + ' seconds ago';
+    if (seconds < 5) return 'только что';
+    let interval = seconds / 31536000;
+    if (interval > 1) return `${Math.floor(interval)} г. назад`;
+    interval = seconds / 2592000;
+    if (interval > 1) return `${Math.floor(interval)} мес. назад`;
+    interval = seconds / 86400;
+    if (interval > 1) return `${Math.floor(interval)} д. назад`;
+    interval = seconds / 3600;
+    if (interval > 1) return `${Math.floor(interval)} ч. назад`;
+    interval = seconds / 60;
+    if (interval > 1) return `${Math.floor(interval)} мин. назад`;
+    return `${Math.floor(seconds)} сек. назад`;
 }
 
 const BiomarkerCard: React.FC<{ biomarker: Biomarker, hasActiveAlert: boolean, isTriggered: boolean }> = ({ biomarker, hasActiveAlert, isTriggered }) => {
@@ -410,14 +406,12 @@ const BiomarkerCard: React.FC<{ biomarker: Biomarker, hasActiveAlert: boolean, i
         high: 'border-red-400',
         low: 'border-blue-400',
     };
-
     const statusPillColors = {
         normal: 'bg-green-100 text-green-800',
         borderline: 'bg-yellow-100 text-yellow-800',
         high: 'bg-red-100 text-red-800',
         low: 'bg-blue-100 text-blue-800',
     };
-    
     const triggeredClasses = isTriggered ? 'border-accent-dark animate-pulse' : statusColors[biomarker.status];
 
     return (
@@ -435,29 +429,15 @@ const BiomarkerCard: React.FC<{ biomarker: Biomarker, hasActiveAlert: boolean, i
                 </p>
                 <div className="mt-auto pt-2 flex justify-between items-baseline">
                     <span className={`px-2.5 py-1 text-xs font-semibold rounded-full capitalize ${statusPillColors[biomarker.status]}`}>{biomarker.status}</span>
-                    <p className="text-xs text-on-surface-variant">Updated {formatDistanceToNow(biomarker.lastUpdated)}</p>
+                    <p className="text-xs text-on-surface-variant">Обновлено {formatDistanceToNow(biomarker.lastUpdated)}</p>
                 </div>
             </Card>
         </Link>
     );
 };
 
-const sortOptions: { [key: string]: string } = {
-    'status': 'Status',
-    'name-asc': 'Name (A-Z)',
-    'name-desc': 'Name (Z-A)',
-    'updated-newest': 'Last Updated (Newest)',
-    'updated-oldest': 'Last Updated (Oldest)',
-};
-
-const statusOrder: { [key in Biomarker['status']]: number } = {
-    high: 0,
-    low: 1,
-    borderline: 2,
-    normal: 3,
-};
-
 const BiomarkersPage: React.FC = () => {
+  const { t } = useTranslation();
   const { biomarkerName } = useParams<{ biomarkerName?: string }>();
   const [tooltip, setTooltip] = useState<{ visible: boolean; x: number; y: number; content: string } | null>(null);
   const [sortOption, setSortOption] = useState<string>('status');
@@ -470,6 +450,14 @@ const BiomarkersPage: React.FC = () => {
 
   const location = useLocation();
   
+  const sortOptions: { [key: string]: string } = {
+    'status': 'По статусу',
+    'name-asc': 'По имени (А-Я)',
+    'name-desc': 'По имени (Я-А)',
+    'updated-newest': 'По дате (сначала новые)',
+    'updated-oldest': 'По дате (сначала старые)',
+  };
+
   useEffect(() => {
     const loadData = async () => {
         setIsLoading(true);
@@ -485,7 +473,6 @@ const BiomarkersPage: React.FC = () => {
             setTestHistory(testHistoryData);
         } catch (error) {
             console.error("Error loading biomarker page data:", error);
-            // Handle UI error state
         } finally {
             setIsLoading(false);
         }
@@ -496,8 +483,18 @@ const BiomarkersPage: React.FC = () => {
 
   const handleSaveAlert = async (updatedAlert: BiomarkerAlert) => {
       const newAlerts = alerts.map(a => a.biomarkerName === updatedAlert.biomarkerName ? updatedAlert : a);
+      if (!alerts.find(a => a.biomarkerName === updatedAlert.biomarkerName)) {
+        newAlerts.push(updatedAlert);
+      }
       await apiService.saveAlerts(newAlerts);
       setAlerts(newAlerts);
+  };
+
+  const statusOrder: { [key in Biomarker['status']]: number } = {
+      high: 0,
+      low: 1,
+      borderline: 2,
+      normal: 3,
   };
 
   const filteredAndSortedBiomarkers = useMemo(() => {
@@ -508,9 +505,9 @@ const BiomarkersPage: React.FC = () => {
     sortable.sort((a, b) => {
         switch (sortOption) {
             case 'name-asc':
-                return a.name.localeCompare(b.name);
+                return a.name.localeCompare(b.name, 'ru');
             case 'name-desc':
-                return b.name.localeCompare(a.name);
+                return b.name.localeCompare(a.name, 'ru');
             case 'updated-newest':
                 return new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime();
             case 'updated-oldest':
@@ -543,13 +540,12 @@ const BiomarkersPage: React.FC = () => {
     return testHistory.find(t => t.id === viewingTestId) || null;
   }, [viewingTestId, testHistory]);
 
-  // Show skeleton loader on initial load
   if (isLoading) {
     return (
         <div className="space-y-6 animate-fadeIn">
             <div>
-                <h1 className="text-3xl sm:text-4xl font-bold text-on-surface tracking-tight">Your Biomarkers</h1>
-                <p className="text-on-surface-variant mt-1">Track your key health indicators over time. Click on a card for more details.</p>
+                <h1 className="text-3xl sm:text-4xl font-bold text-on-surface tracking-tight">{t('biomarkers.title')}</h1>
+                <p className="text-on-surface-variant mt-1">{t('biomarkers.subtitle')}</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {Array.from({ length: 8 }).map((_, index) => <BiomarkerCardSkeleton key={index} />)}
@@ -558,7 +554,6 @@ const BiomarkersPage: React.FC = () => {
     );
   }
 
-  // Render detail view if a biomarker name is in the URL
   if (biomarkerName) {
     const decodedName = decodeURIComponent(biomarkerName);
     const selectedBiomarker = biomarkers.find(b => b.name.toLowerCase() === decodedName.toLowerCase());
@@ -566,10 +561,10 @@ const BiomarkersPage: React.FC = () => {
     if (!selectedBiomarker) {
         return (
             <div className="text-center p-8 animate-fadeIn">
-                <h2 className="text-2xl font-bold text-on-surface">Biomarker Not Found</h2>
-                <p className="mt-2 text-on-surface-variant">The biomarker "{decodedName}" could not be found in your records.</p>
+                <h2 className="text-2xl font-bold text-on-surface">{t('biomarkers.notFound')}</h2>
+                <p className="mt-2 text-on-surface-variant">{t('biomarkers.notFoundHint', { name: decodedName })}</p>
                 <Link to="/biomarkers" className="mt-4 inline-block">
-                    <Button>Back to All Biomarkers</Button>
+                    <Button>{t('biomarkers.backToAll')}</Button>
                 </Link>
             </div>
         );
@@ -602,12 +597,11 @@ const BiomarkersPage: React.FC = () => {
     );
   }
 
-  // Render the list view by default
   return (
     <div className="space-y-6 animate-fadeIn">
         <div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-on-surface tracking-tight">Your Biomarkers</h1>
-            <p className="text-on-surface-variant mt-1">Track your key health indicators over time. Click on a card for more details.</p>
+            <h1 className="text-3xl sm:text-4xl font-bold text-on-surface tracking-tight">{t('biomarkers.title')}</h1>
+            <p className="text-on-surface-variant mt-1">{t('biomarkers.subtitle')}</p>
         </div>
       
         <div className="flex flex-col sm:flex-row gap-4">
@@ -619,8 +613,8 @@ const BiomarkersPage: React.FC = () => {
                     type="text"
                     name="search"
                     id="search"
-                    className="block w-full rounded-xl border-gray-300 pl-10 shadow-sm focus:border-primary focus:ring-primary sm:text-sm py-2.5"
-                    placeholder="Search biomarkers by name..."
+                    className="block w-full rounded-xl border-gray-300 pl-10 shadow-sm focus:border-primary focus:ring-primary sm:text-sm py-2.5 text-on-surface"
+                    placeholder={t('biomarkers.searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -633,7 +627,7 @@ const BiomarkersPage: React.FC = () => {
                     className="text-on-surface w-full sm:w-auto bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-primary/50 font-semibold rounded-xl text-sm px-5 py-2.5 text-center inline-flex items-center border border-gray-300 shadow-sm" 
                     type="button"
                 >
-                    Sort by: {sortOptions[sortOption]}
+                    {t('biomarkers.sortBy', { option: sortOptions[sortOption] })}
                     <ChevronDownIcon className="w-4 h-4 ml-2" />
                 </button>
                 <div id="sortDropdown" className="z-10 hidden bg-white divide-y divide-gray-100 rounded-lg shadow-lg w-44">
@@ -672,16 +666,16 @@ const BiomarkersPage: React.FC = () => {
             searchQuery ? (
                 <div className="text-center py-16 px-4 bg-surface rounded-2xl shadow-soft border border-gray-200/60">
                     <MagnifyingGlassIcon className="mx-auto h-16 w-16 text-on-surface-variant opacity-50" />
-                    <h2 className="mt-4 text-2xl font-bold text-on-surface">No Results Found</h2>
-                    <p className="mt-2 text-on-surface-variant max-w-md mx-auto">No biomarkers match your search for "{searchQuery}".</p>
+                    <h2 className="mt-4 text-2xl font-bold text-on-surface">{t('biomarkers.noResults')}</h2>
+                    <p className="mt-2 text-on-surface-variant max-w-md mx-auto">{t('biomarkers.noResultsQuery', { query: searchQuery })}</p>
                 </div>
             ) : (
                 <div className="text-center py-16 px-4 bg-surface rounded-2xl shadow-soft border border-gray-200/60">
                     <DocumentTextIcon className="mx-auto h-16 w-16 text-on-surface-variant opacity-50" />
-                    <h2 className="mt-4 text-2xl font-bold text-on-surface">No Biomarker Data Found</h2>
-                    <p className="mt-2 text-on-surface-variant max-w-md mx-auto">Start your health journey by analyzing your first blood test report. The AI will extract your key biomarkers and help you track them over time.</p>
+                    <h2 className="mt-4 text-2xl font-bold text-on-surface">{t('biomarkers.noData')}</h2>
+                    <p className="mt-2 text-on-surface-variant max-w-md mx-auto">{t('biomarkers.noDataHint')}</p>
                     <Link to="/blood-test" className="mt-6 inline-block">
-                        <Button leftIcon={<SparklesIcon className="w-5 h-5 mr-2"/>}>Analyze Your First Blood Test</Button>
+                        <Button leftIcon={<SparklesIcon className="w-5 h-5 mr-2"/>}>{t('biomarkers.analyzeFirst')}</Button>
                     </Link>
                 </div>
             )

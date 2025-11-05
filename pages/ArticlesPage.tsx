@@ -1,94 +1,94 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { apiService } from '../services/apiService';
 import { HeartIcon, ArrowUpTrayIcon } from '../components/icons/IconComponents';
 import { HeartIconSolid } from '../components/icons/IconComponents';
 
 const articles = [
   {
-    category: 'Nutrition',
-    title: 'The Benefits of a Mediterranean Diet',
-    summary: 'Discover why the Mediterranean diet is consistently ranked as one of the healthiest eating patterns for heart health and longevity.',
+    category: 'Питание',
+    title: 'Польза средиземноморской диеты',
+    summary: 'Узнайте, почему средиземноморская диета постоянно признается одним из самых здоровых стилей питания для здоровья сердца и долголетия.',
     imageUrl: 'https://images.unsplash.com/photo-1522184216316-3c25379f9760?q=80&w=2070&auto=format&fit=crop',
     color: { text: 'text-card-blue-text' },
-    author: 'Dr. Emily Carter',
+    author: 'Д-р Эмили Картер',
     authorAvatar: 'https://randomuser.me/api/portraits/women/44.jpg',
     publishedDate: '2024-05-15',
     content: `
-      <p class="mb-4">The Mediterranean diet is a way of eating based on the traditional cuisines of Greece, Italy, and other countries that border the Mediterranean Sea. Plant-based foods, such as whole grains, vegetables, legumes, fruits, nuts, seeds, herbs, and spices, are the foundation of the diet. Olive oil is the main source of added fat.</p>
-      <p class="mb-4">Fish, seafood, dairy, and poultry are included in moderation. Red meat and sweets are eaten only occasionally. This dietary pattern has been associated with a wide range of health benefits, including a lower risk of heart disease, certain cancers, and cognitive decline.</p>
-      <h4 class="text-lg font-bold mt-6 mb-2">Key Benefits:</h4>
+      <p class="mb-4">Средиземноморская диета — это система питания, основанная на традиционных кухнях Греции, Италии и других стран, граничащих со Средиземным морем. Основу рациона составляют растительные продукты, такие как цельные злаки, овощи, бобовые, фрукты, орехи, семена, травы и специи. Оливковое масло является основным источником добавленных жиров.</p>
+      <p class="mb-4">Рыба, морепродукты, молочные продукты и птица включаются в умеренных количествах. Красное мясо и сладости употребляются лишь изредка. Этот тип питания связывают с широким спектром преимуществ для здоровья, включая снижение риска сердечных заболеваний, некоторых видов рака и когнитивных нарушений.</p>
+      <h4 class="text-lg font-bold mt-6 mb-2">Ключевые преимущества:</h4>
       <ul class="list-disc list-inside mb-4 space-y-2">
-        <li><strong>Heart Health:</strong> Rich in monounsaturated fats from olive oil and omega-3s from fish, it helps lower "bad" LDL cholesterol and reduce inflammation.</li>
-        <li><strong>Brain Function:</strong> The antioxidants and healthy fats in the diet are protective against age-related cognitive decline and may reduce the risk of Alzheimer's disease.</li>
-        <li><strong>Weight Management:</strong> Being high in fiber and healthy fats, it promotes satiety, which can help with maintaining a healthy weight without feeling deprived.</li>
+        <li><strong>Здоровье сердца:</strong> Богатая мононенасыщенными жирами из оливкового масла и омега-3 из рыбы, диета помогает снизить "плохой" холестерин ЛПНП и уменьшить воспаление.</li>
+        <li><strong>Функция мозга:</strong> Антиоксиданты и полезные жиры в диете защищают от возрастного снижения когнитивных функций и могут снизить риск болезни Альцгеймера.</li>
+        <li><strong>Контроль веса:</strong> Благодаря высокому содержанию клетчатки и полезных жиров, она способствует насыщению, что может помочь в поддержании здорового веса без чувства обделенности.</li>
       </ul>
-      <p>To get started, try simple swaps like using olive oil instead of butter, eating fish twice a week, and filling your plate with a variety of colorful vegetables.</p>
+      <p>Чтобы начать, попробуйте простые замены, такие как использование оливкового масла вместо сливочного, употребление рыбы дважды в неделю и наполнение тарелки разнообразными цветными овощами.</p>
     `
   },
   {
-    category: 'Fitness',
-    title: 'High-Intensity Interval Training (HIIT) Explained',
-    summary: 'Learn how short bursts of intense exercise followed by brief recovery periods can significantly boost your cardiovascular fitness.',
+    category: 'Фитнес',
+    title: 'Объяснение высокоинтенсивных интервальных тренировок (ВИИТ)',
+    summary: 'Узнайте, как короткие всплески интенсивных упражнений, сменяющиеся краткими периодами восстановления, могут значительно улучшить вашу сердечно-сосудистую систему.',
     imageUrl: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=2070&auto=format&fit=crop',
     color: { text: 'text-card-red-text' },
-    author: 'Mark Johnson',
+    author: 'Марк Джонсон',
     authorAvatar: 'https://randomuser.me/api/portraits/men/32.jpg',
     publishedDate: '2024-05-10',
     content: `
-      <p class="mb-4">High-Intensity Interval Training (HIIT) involves short, intense bursts of exercise alternated with low-intensity recovery periods. It is one of the most time-efficient ways to exercise, with workouts typically lasting between 10 to 30 minutes.</p>
-      <p class="mb-4">The core idea is to push your body to its limit for a brief period, then allow it to recover before the next burst. This method keeps your heart rate up and can burn more fat in less time compared to steady-state cardio. A typical HIIT session might involve 30 seconds of sprinting followed by 60 seconds of walking, repeated for 15 minutes.</p>
-      <h4 class="text-lg font-bold mt-6 mb-2">Why HIIT Works:</h4>
+      <p class="mb-4">Высокоинтенсивные интервальные тренировки (ВИИТ) включают короткие, интенсивные всплески упражнений, чередующиеся с периодами восстановления низкой интенсивности. Это один из самых эффективных по времени способов тренировки, продолжительность которой обычно составляет от 10 до 30 минут.</p>
+      <p class="mb-4">Основная идея заключается в том, чтобы довести свое тело до предела на короткий период, а затем дать ему восстановиться перед следующим всплеском. Этот метод поддерживает высокую частоту сердечных сокращений и может сжигать больше жира за меньшее время по сравнению с кардио в постоянном темпе. Типичная сессия ВИИТ может включать 30 секунд спринта, за которыми следует 60 секунд ходьбы, повторяемые в течение 15 минут.</p>
+      <h4 class="text-lg font-bold mt-6 mb-2">Почему ВИИТ работает:</h4>
       <ul class="list-disc list-inside mb-4 space-y-2">
-        <li><strong>Time-Efficiency:</strong> Get the benefits of a longer workout in a fraction of the time.</li>
-        <li><strong>Metabolic Boost:</strong> HIIT can increase your metabolic rate for hours after exercise, a phenomenon known as the afterburn effect.</li>
-        <li><strong>Improved VO2 Max:</strong> It's highly effective at improving your VO2 max, a key indicator of cardiovascular health.</li>
+        <li><strong>Эффективность по времени:</strong> Получите преимущества более длительной тренировки за меньшее время.</li>
+        <li><strong>Ускорение метаболизма:</strong> ВИИТ может повысить ваш метаболизм на несколько часов после тренировки, явление, известное как эффект дожигания.</li>
+        <li><strong>Улучшение VO2 max:</strong> Этот метод очень эффективен для улучшения вашего VO2 max, ключевого показателя здоровья сердечно-сосудистой системы.</li>
       </ul>
-      <p>Because of its intensity, it's important to start slowly and ensure you have a solid fitness base before diving into advanced HIIT routines. Always warm up properly and cool down afterward.</p>
+      <p>Из-за высокой интенсивности важно начинать медленно и убедиться, что у вас есть солидная физическая подготовка, прежде чем переходить к продвинутым программам ВИИТ. Всегда правильно разогревайтесь и остывайте после тренировки.</p>
     `
   },
   {
-    category: 'Mental Wellness',
-    title: 'Mindfulness and Meditation for Stress Reduction',
-    summary: 'Explore simple techniques to practice mindfulness and meditation, which can help calm your mind and reduce daily stress.',
+    category: 'Ментальное здоровье',
+    title: 'Осознанность и медитация для снижения стресса',
+    summary: 'Изучите простые техники практики осознанности и медитации, которые могут помочь успокоить ум и уменьшить ежедневный стресс.',
     imageUrl: 'https://images.unsplash.com/photo-1506126613408-4e05860f5d58?q=80&w=2070&auto=format&fit=crop',
     color: { text: 'text-card-teal-text' },
-    author: 'Aisha Khan',
+    author: 'Аиша Хан',
     authorAvatar: 'https://randomuser.me/api/portraits/women/65.jpg',
     publishedDate: '2024-04-28',
     content: `
-      <p class="mb-4">Mindfulness is the practice of purposely bringing one's attention to the present moment without evaluation, a skill you can develop through meditation or other training. Meditation is a practice where an individual uses a technique – such as mindfulness, or focusing the mind on a particular object, thought, or activity – to train attention and awareness, and achieve a mentally clear and emotionally calm and stable state.</p>
-      <p class="mb-4">In a world filled with distractions, these practices can be a powerful tool to manage stress, anxiety, and the general overwhelm of daily life. Even a few minutes a day can make a significant difference in your overall well-being.</p>
-      <h4 class="text-lg font-bold mt-6 mb-2">Simple Mindfulness Exercises:</h4>
+      <p class="mb-4">Осознанность — это практика целенаправленного привлечения внимания к настоящему моменту без оценки, навык, который можно развить с помощью медитации или других тренировок. Медитация — это практика, в которой человек использует технику, такую как осознанность или сосредоточение ума на определенном объекте, мысли или деятельности, чтобы тренировать внимание и осознание, а также достичь умственно ясного и эмоционально спокойного и стабильного состояния.</p>
+      <p class="mb-4">В мире, полном отвлекающих факторов, эти практики могут быть мощным инструментом для управления стрессом, тревогой и общим перегрузом повседневной жизни. Даже несколько минут в день могут значительно улучшить ваше общее самочувствие.</p>
+      <h4 class="text-lg font-bold mt-6 mb-2">Простые упражнения на осознанность:</h4>
       <ul class="list-disc list-inside mb-4 space-y-2">
-        <li><strong>Mindful Breathing:</strong> Sit comfortably and focus on your breath. Notice the sensation of the air entering your nostrils and filling your lungs. When your mind wanders, gently guide it back to your breath.</li>
-        <li><strong>Body Scan:</strong> Lie down and bring your attention to different parts of your body, from your toes to your head. Notice any sensations (warmth, tingling, tension) without judging them.</li>
-        <li><strong>Mindful Walking:</strong> Pay attention to the sensation of your feet on the ground and the movement of your body as you walk.</li>
+        <li><strong>Осознанное дыхание:</strong> Сядьте удобно и сосредоточьтесь на своем дыхании. Замечайте ощущение воздуха, входящего в ноздри и наполняющего легкие. Когда ваш ум отвлекается, мягко верните его к дыханию.</li>
+        <li><strong>Сканирование тела:</strong> Лягте и обратите внимание на разные части вашего тела, от пальцев ног до головы. Замечайте любые ощущения (тепло, покалывание, напряжение) без осуждения.</li>
+        <li><strong>Осознанная ходьба:</strong> Обращайте внимание на ощущение ваших стоп на земле и движение вашего тела во время ходьбы.</li>
       </ul>
-      <p>The goal isn't to stop your thoughts, but rather to become an observer of them without getting carried away.</p>
+      <p>Цель не в том, чтобы остановить свои мысли, а в том, чтобы стать их наблюдателем, не увлекаясь ими.</p>
     `
   },
   {
-    category: 'Longevity',
-    title: 'The Science of Sleep: Why It Matters for a Long Life',
-    summary: 'Understand the critical role that quality sleep plays in cellular repair, cognitive function, and overall long-term health.',
+    category: 'Долголетие',
+    title: 'Наука о сне: почему он важен для долгой жизни',
+    summary: 'Поймите критическую роль качественного сна в восстановлении клеток, когнитивной функции и общем долгосрочном здоровье.',
     imageUrl: 'https://images.unsplash.com/photo-1444210971048-6a3006adbe44?q=80&w=2070&auto=format&fit=crop',
     color: { text: 'text-card-purple-text' },
-    author: 'Dr. David Chen',
+    author: 'Д-р Дэвид Чен',
     authorAvatar: 'https://randomuser.me/api/portraits/men/75.jpg',
     publishedDate: '2024-04-19',
     content: `
-      <p class="mb-4">Sleep is not merely a period of inactivity; it is a critical biological process essential for our physical and mental health. While we rest, our bodies are hard at work repairing cells, consolidating memories, and regulating essential hormones. Chronic sleep deprivation is linked to a host of health problems, including heart disease, diabetes, obesity, and a weakened immune system.</p>
-      <p class="mb-4">During sleep, our brains cycle through different stages, including REM (Rapid Eye Movement) and non-REM sleep. Each stage plays a unique role, from deep physical rest and repair in non-REM sleep to emotional regulation and memory processing in REM sleep. Getting a full night of quality sleep allows us to complete these cycles, which is vital for feeling refreshed and functioning optimally the next day.</p>
-      <h4 class="text-lg font-bold mt-6 mb-2">Tips for Better Sleep:</h4>
+      <p class="mb-4">Сон — это не просто период бездействия; это критически важный биологический процесс, необходимый для нашего физического и психического здоровья. Пока мы отдыхаем, наши тела усердно работают над восстановлением клеток, консолидацией воспоминаний и регуляцией основных гормонов. Хроническое недосыпание связано с множеством проблем со здоровьем, включая болезни сердца, диабет, ожирение и ослабленную иммунную систему.</p>
+      <p class="mb-4">Во время сна наш мозг проходит через различные стадии, включая REM (быстрое движение глаз) и не-REM сон. Каждая стадия играет уникальную роль, от глубокого физического отдыха и восстановления в не-REM сне до эмоциональной регуляции и обработки памяти в REM сне. Полноценный качественный сон позволяет нам завершить эти циклы, что жизненно важно для ощущения бодрости и оптимального функционирования на следующий день.</p>
+      <h4 class="text-lg font-bold mt-6 mb-2">Советы для лучшего сна:</h4>
       <ul class="list-disc list-inside mb-4 space-y-2">
-        <li><strong>Consistent Schedule:</strong> Go to bed and wake up at the same time every day, even on weekends.</li>
-        <li><strong>Create a Restful Environment:</strong> Keep your bedroom dark, quiet, cool, and free of screens.</li>
-        <li><strong>Limit Caffeine and Alcohol:</strong> Avoid stimulants like caffeine and alcohol, especially in the hours before bedtime.</li>
-        <li><strong>Wind Down:</strong> Develop a relaxing pre-sleep routine, such as reading a book, taking a warm bath, or listening to calming music.</li>
+        <li><strong>Постоянный график:</strong> Ложитесь спать и просыпайтесь в одно и то же время каждый день, даже в выходные.</li>
+        <li><strong>Создайте спокойную обстановку:</strong> Ваша спальня должна быть темной, тихой, прохладной и свободной от экранов.</li>
+        <li><strong>Ограничьте кофеин и алкоголь:</strong> Избегайте стимуляторов, таких как кофеин и алкоголь, особенно за несколько часов до сна.</li>
+        <li><strong>Расслабьтесь перед сном:</strong> Разработайте расслабляющий ритуал перед сном, например, чтение книги, теплая ванна или прослушивание успокаивающей музыки.</li>
       </ul>
-      <p>Prioritizing sleep is one of the most effective things you can do to support your long-term health and well-being.</p>
+      <p>Приоритизация сна — одно из самых эффективных действий, которые вы можете предпринять для поддержания своего долгосрочного здоровья и благополучия.</p>
     `
   },
 ];
@@ -147,6 +147,7 @@ const ArticleCard: React.FC<{ article: typeof articles[0] }> = ({ article }) => 
 };
 
 const ArticleDetailView: React.FC<{ article: typeof articles[0] }> = ({ article }) => {
+    const { t } = useTranslation();
     const [isLiked, setIsLiked] = useState(false);
     const [likedArticles, setLikedArticles] = useState<string[]>([]);
     const [showCopyMessage, setShowCopyMessage] = useState(false);
@@ -201,6 +202,12 @@ const ArticleDetailView: React.FC<{ article: typeof articles[0] }> = ({ article 
             setTimeout(() => setShowCopyMessage(false), 2000);
         }
     };
+    
+    const publishedDate = new Date(article.publishedDate).toLocaleDateString('ru-RU', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
 
     return (
         <div className="max-w-4xl mx-auto animate-fadeIn">
@@ -213,17 +220,17 @@ const ArticleDetailView: React.FC<{ article: typeof articles[0] }> = ({ article 
                         <img src={article.authorAvatar} alt={article.author} className="w-12 h-12 rounded-full mr-4 object-cover" />
                         <div>
                             <p className="font-semibold text-on-surface">{article.author}</p>
-                            <p className="text-sm text-on-surface-variant">Published on {new Date(article.publishedDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                            <p className="text-sm text-on-surface-variant">{t('articles.publishedOn', { date: publishedDate })}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2 relative">
-                        <button onClick={handleToggleLike} className="p-2 rounded-full hover:bg-red-100 group transition-colors" aria-label={isLiked ? 'Unlike article' : 'Like article'}>
+                        <button onClick={handleToggleLike} className="p-2 rounded-full hover:bg-red-100 group transition-colors" aria-label={isLiked ? t('articles.unlike') : t('articles.like')}>
                             {isLiked ? <HeartIconSolid className="h-6 w-6 text-red-500" /> : <HeartIcon className="h-6 w-6 text-on-surface-variant group-hover:text-red-500" />}
                         </button>
-                        <button onClick={handleShare} className="p-2 rounded-full hover:bg-gray-100 text-on-surface-variant hover:text-on-surface transition-colors" aria-label="Share article">
+                        <button onClick={handleShare} className="p-2 rounded-full hover:bg-gray-100 text-on-surface-variant hover:text-on-surface transition-colors" aria-label={t('articles.share')}>
                             <ArrowUpTrayIcon className="h-6 w-6" />
                         </button>
-                        {showCopyMessage && <span className="absolute left-full ml-2 text-sm text-primary animate-fadeIn whitespace-nowrap bg-primary/10 px-2 py-1 rounded-md">Link copied!</span>}
+                        {showCopyMessage && <span className="absolute left-full ml-2 text-sm text-primary animate-fadeIn whitespace-nowrap bg-primary/10 px-2 py-1 rounded-md">{t('articles.linkCopied')}</span>}
                     </div>
                 </div>
             </div>
@@ -237,10 +244,10 @@ const ArticleDetailView: React.FC<{ article: typeof articles[0] }> = ({ article 
 
 const ArticlesPage: React.FC = () => {
   const { articleTitle } = useParams<{ articleTitle?: string }>();
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate fetching articles
     const timer = setTimeout(() => {
         setIsLoading(false);
     }, 750);
@@ -254,8 +261,8 @@ const ArticlesPage: React.FC = () => {
     return (
         <div className="space-y-6 animate-fadeIn">
             <div>
-                <h1 className="text-3xl sm:text-4xl font-bold text-on-surface tracking-tight">Health Articles</h1>
-                <p className="text-on-surface-variant mt-1">Curated reads to inspire and inform your wellness journey.</p>
+                <h1 className="text-3xl sm:text-4xl font-bold text-on-surface tracking-tight">{t('articles.title')}</h1>
+                <p className="text-on-surface-variant mt-1">{t('articles.subtitle')}</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-10">
                 {Array.from({ length: 4 }).map((_, index) => (
@@ -275,8 +282,8 @@ const ArticlesPage: React.FC = () => {
       } else {
           return (
               <div className="text-center p-8">
-                  <h2 className="text-2xl font-bold">Article not found</h2>
-                  <Link to="/articles" className="text-primary hover:underline mt-4 inline-block">Back to all articles</Link>
+                  <h2 className="text-2xl font-bold">{t('articles.notFound')}</h2>
+                  <Link to="/articles" className="text-primary hover:underline mt-4 inline-block">{t('articles.backToAll')}</Link>
               </div>
           );
       }
@@ -285,8 +292,8 @@ const ArticlesPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fadeIn">
       <div>
-        <h1 className="text-3xl sm:text-4xl font-bold text-on-surface tracking-tight">Health Articles</h1>
-        <p className="text-on-surface-variant mt-1">Curated reads to inspire and inform your wellness journey.</p>
+        <h1 className="text-3xl sm:text-4xl font-bold text-on-surface tracking-tight">{t('articles.title')}</h1>
+        <p className="text-on-surface-variant mt-1">{t('articles.subtitle')}</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-12">
         {articles.map((article) => (

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Bars3Icon, ArrowLeftIcon } from '../icons/IconComponents';
 
 interface HeaderProps {
@@ -10,6 +11,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ toggleSidebar, isAssistantPage = false }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   
   const isDetailPage = (location.pathname.startsWith('/biomarkers/') && location.pathname.length > '/biomarkers/'.length) || 
                        (location.pathname.startsWith('/articles/') && location.pathname.length > '/articles/'.length);
@@ -21,7 +23,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, isAssistantPage = false 
             <button 
                 onClick={() => navigate(-1)} 
                 className="mr-4 p-2 rounded-full text-on-surface-variant hover:text-on-surface hover:bg-gray-100 transition-colors -ml-2"
-                aria-label="Go back"
+                aria-label={t('common.back')}
             >
                 <ArrowLeftIcon className="h-6 w-6" />
             </button>
@@ -41,12 +43,11 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, isAssistantPage = false 
                     EVERLIV
                 </h1>
                 <p className="text-xs text-on-surface-variant mt-0.5">
-                    Get Your health in order
+                    {t('header.subtitle')}
                 </p>
             </div>
         </div>
       </div>
-      {/* Additional header content can go here, e.g., notifications */}
     </header>
   );
 };

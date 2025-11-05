@@ -1,6 +1,9 @@
-import React, { useEffect } from 'react';
+
+import React, { useEffect, useState } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 
+import { initializeFirebase } from './services/firebase';
+import { firebaseConfig } from './services/firebaseConfig';
 import Sidebar from './components/layout/Sidebar';
 import DashboardPage from './pages/DashboardPage';
 import BloodTestPage from './pages/BloodTestPage';
@@ -14,7 +17,10 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import BottomNavBar from './components/layout/BottomNavBar';
 import UpgradeModal from './components/ui/UpgradeModal';
 import HealthProfileSetupPage from './pages/HealthProfileSetupPage';
-import BackendSetupModal from './components/ui/BackendSetupModal';
+import MindfulMomentsPage from './pages/VideoConsultationPage';
+
+// Initialize Firebase once when the app loads
+initializeFirebase(firebaseConfig);
 
 // A component to handle protected routes
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -91,6 +97,7 @@ const AppContent: React.FC = () => {
             <Route path="/biomarkers/:biomarkerName" element={<ProtectedRoute><ProRoute><BiomarkersPage /></ProRoute></ProtectedRoute>} />
             <Route path="/articles" element={<ProtectedRoute><ProRoute><ArticlesPage /></ProRoute></ProtectedRoute>} />
             <Route path="/articles/:articleTitle" element={<ProtectedRoute><ProRoute><ArticlesPage /></ProRoute></ProtectedRoute>} />
+            <Route path="/mindful-moments" element={<ProtectedRoute><ProRoute><MindfulMomentsPage /></ProRoute></ProtectedRoute>} />
           </Routes>
         </main>
       </div>
@@ -100,19 +107,18 @@ const AppContent: React.FC = () => {
   );
 };
 
-
 const App: React.FC = () => {
-  return (
-    <AuthProvider>
-        <HashRouter>
-            <AppInitializer />
-        </HashRouter>
-    </AuthProvider>
-  );
+    return (
+      <AuthProvider>
+          <HashRouter>
+              <AppInitializer />
+          </HashRouter>
+      </AuthProvider>
+    );
 };
 
 const AppInitializer: React.FC = () => {
-    const { isBackendConfigured, isInitializing, configureBackend } = useAuth();
+    const { isInitializing } = useAuth();
 
     if (isInitializing) {
         return (
@@ -123,10 +129,6 @@ const AppInitializer: React.FC = () => {
                 </svg>
             </div>
         );
-    }
-
-    if (!isBackendConfigured) {
-        return <BackendSetupModal onSave={configureBackend} />;
     }
 
     return (

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { getDailyHealthTip } from '../services/geminiService';
 import type { Biomarker, BloodTestRecord } from '../types';
@@ -20,17 +21,20 @@ const Skeleton: React.FC<{ className?: string }> = ({ className = '' }) => (
     <div className={`bg-gray-200 rounded-md animate-pulse ${className}`} />
 );
 
-const RecommendationCard: React.FC<{ tip: string }> = ({ tip }) => (
-    <div className="bg-gradient-to-r from-primary/90 to-primary p-6 rounded-2xl shadow-soft-md text-white">
-        <h3 className="font-bold flex items-center">
-            <SparklesIcon className="h-5 w-5 mr-2 text-white/80"/>
-            Today's Recommendation
-        </h3>
-        <div className="mt-2 text-lg min-h-[40px]">
-            {tip}
+const RecommendationCard: React.FC<{ tip: string }> = ({ tip }) => {
+    const { t } = useTranslation();
+    return (
+        <div className="bg-gradient-to-r from-primary/90 to-primary p-6 rounded-2xl shadow-soft-md text-white">
+            <h3 className="font-bold flex items-center">
+                <SparklesIcon className="h-5 w-5 mr-2 text-white/80"/>
+                {t('dashboard.recommendationTitle')}
+            </h3>
+            <div className="mt-2 text-lg min-h-[40px]">
+                {tip}
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 const RecommendationCardSkeleton: React.FC = () => (
     <div className="p-6 rounded-2xl shadow-soft bg-gray-200 animate-pulse">
@@ -45,32 +49,35 @@ const RecommendationCardSkeleton: React.FC = () => (
     </div>
 );
 
-const LatestRecommendationsCard: React.FC<{ recommendations: string[] }> = ({ recommendations }) => (
-    <div className="bg-gradient-to-br from-card-blue-from to-card-blue-to rounded-2xl shadow-soft border border-blue-200/80 p-6 flex flex-col">
-        <div className="flex items-center">
-            <div className="flex-shrink-0 bg-white/70 rounded-full p-2 mr-4">
-                <ClipboardDocumentListIcon className="h-6 w-6 text-card-blue-text" />
+const LatestRecommendationsCard: React.FC<{ recommendations: string[] }> = ({ recommendations }) => {
+    const { t } = useTranslation();
+    return (
+        <div className="bg-gradient-to-br from-card-blue-from to-card-blue-to rounded-2xl shadow-soft border border-blue-200/80 p-6 flex flex-col">
+            <div className="flex items-center">
+                <div className="flex-shrink-0 bg-white/70 rounded-full p-2 mr-4">
+                    <ClipboardDocumentListIcon className="h-6 w-6 text-card-blue-text" />
+                </div>
+                <h3 className="font-bold text-card-blue-text text-lg">
+                    {t('dashboard.actionPlanTitle')}
+                </h3>
             </div>
-            <h3 className="font-bold text-card-blue-text text-lg">
-                Action Plan from Your Last Test
-            </h3>
+            <ul className="mt-4 space-y-3 flex-grow">
+                {recommendations.slice(0, 3).map((rec, index) => (
+                    <li key={index} className="flex items-start">
+                        <CheckCircleIcon className="h-5 w-5 text-primary/80 mr-3 mt-0.5 flex-shrink-0" />
+                        <span className="text-on-surface-variant text-sm">{rec}</span>
+                    </li>
+                ))}
+            </ul>
+            <div className="mt-auto text-center pt-4">
+                <Link to="/biomarkers" className="inline-flex items-center px-5 py-2 text-sm font-semibold text-primary bg-white/90 rounded-xl shadow-soft hover:bg-white transition-all transform hover:-translate-y-0.5 hover:shadow-soft-md">
+                    {t('dashboard.viewAllRecommendations')}
+                    <ChevronRightIcon className="w-4 h-4 ml-1.5" />
+                </Link>
+            </div>
         </div>
-        <ul className="mt-4 space-y-3 flex-grow">
-            {recommendations.slice(0, 3).map((rec, index) => (
-                <li key={index} className="flex items-start">
-                    <CheckCircleIcon className="h-5 w-5 text-primary/80 mr-3 mt-0.5 flex-shrink-0" />
-                    <span className="text-on-surface-variant text-sm">{rec}</span>
-                </li>
-            ))}
-        </ul>
-        <div className="mt-auto text-center pt-4">
-            <Link to="/biomarkers" className="inline-flex items-center px-5 py-2 text-sm font-semibold text-primary bg-white/90 rounded-xl shadow-soft hover:bg-white transition-all transform hover:-translate-y-0.5 hover:shadow-soft-md">
-                View All Recommendations
-                <ChevronRightIcon className="w-4 h-4 ml-1.5" />
-            </Link>
-        </div>
-    </div>
-);
+    );
+};
 
 
 const LatestRecommendationsCardSkeleton: React.FC = () => (
@@ -96,6 +103,7 @@ const LatestRecommendationsCardSkeleton: React.FC = () => (
 
 
 const AttentionBiomarkers: React.FC<{ biomarkers: Biomarker[] }> = ({ biomarkers }) => {
+    const { t } = useTranslation();
     const attentionBiomarkers = biomarkers.filter(b => b.status !== 'normal');
     const statusPillColors = {
         borderline: 'bg-yellow-100 text-yellow-800',
@@ -108,7 +116,7 @@ const AttentionBiomarkers: React.FC<{ biomarkers: Biomarker[] }> = ({ biomarkers
         <div className="bg-surface rounded-2xl shadow-soft border border-gray-200/60 p-6">
             <h3 className="font-bold text-on-surface flex items-center">
                 <ExclamationTriangleIcon className="h-5 w-5 mr-2 text-yellow-500" />
-                Biomarkers Requiring Attention
+                {t('dashboard.attentionBiomarkersTitle')}
             </h3>
             {attentionBiomarkers.length > 0 ? (
                 <ul className="mt-4 space-y-3">
@@ -128,8 +136,8 @@ const AttentionBiomarkers: React.FC<{ biomarkers: Biomarker[] }> = ({ biomarkers
                 <div className="mt-4 flex items-center p-4 rounded-lg bg-green-50/80 border border-green-200/80">
                     <CheckCircleIcon className="h-8 w-8 text-green-500 mr-4 flex-shrink-0" />
                     <div>
-                        <p className="font-semibold text-green-800">All Biomarkers Normal</p>
-                        <p className="text-sm text-green-700">Everything looks great. Keep up the good work!</p>
+                        <p className="font-semibold text-green-800">{t('dashboard.allNormal')}</p>
+                        <p className="text-sm text-green-700">{t('dashboard.allNormalSubtitle')}</p>
                     </div>
                 </div>
             )}
@@ -158,15 +166,16 @@ const AttentionBiomarkersSkeleton: React.FC = () => (
 );
 
 const HealthChecklist: React.FC = () => {
+    const { t } = useTranslation();
     const essentialTests = [
-        { name: 'Complete Blood Count (CBC)', description: 'Evaluates overall health and detects a wide range of disorders.' },
-        { name: 'Comprehensive Metabolic Panel (CMP)', description: 'Checks kidney/liver function, blood sugar, and electrolytes.' },
-        { name: 'Lipid Panel', description: 'Measures cholesterol and triglycerides for heart health.' },
+        { name: t('dashboard.essentialTests.cbc'), description: t('dashboard.essentialTests.cbcDesc') },
+        { name: t('dashboard.essentialTests.cmp'), description: t('dashboard.essentialTests.cmpDesc') },
+        { name: t('dashboard.essentialTests.lipid'), description: t('dashboard.essentialTests.lipidDesc') },
     ];
     return (
         <div className="bg-surface rounded-2xl shadow-soft border border-gray-200/60 p-6">
-            <h3 className="font-bold text-on-surface">Essential Health Checklist</h3>
-            <p className="text-sm text-on-surface-variant mt-1">Common tests to proactively monitor your health.</p>
+            <h3 className="font-bold text-on-surface">{t('dashboard.checklistTitle')}</h3>
+            <p className="text-sm text-on-surface-variant mt-1">{t('dashboard.checklistSubtitle')}</p>
              <ul className="mt-4 space-y-2 divide-y divide-gray-200/80">
                 {essentialTests.map(test => (
                     <li key={test.name} className="py-3 flex items-start justify-between">
@@ -176,7 +185,7 @@ const HealthChecklist: React.FC = () => {
                         </div>
                         <Link to="/blood-test" className="ml-4 flex-shrink-0">
                             <button className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
-                                Add Results
+                                {t('dashboard.addResults')}
                             </button>
                         </Link>
                     </li>
@@ -205,16 +214,17 @@ const HealthChecklistSkeleton: React.FC = () => (
 );
 
 const QuickStartCard: React.FC = () => {
+    const { t } = useTranslation();
     const items = [
-        { name: 'AI Blood Analysis', description: 'Upload a new report', href: '/blood-test', icon: DocumentTextIcon, color: 'bg-card-blue-from text-card-blue-text' },
-        { name: 'AI Assistant', description: 'Chat for health advice', href: '/assistant', icon: SparklesIcon, color: 'bg-card-purple-from text-card-purple-text' },
-        { name: 'View Biomarkers', description: 'Track your history', href: '/biomarkers', icon: ChartBarIcon, color: 'bg-card-teal-from text-card-teal-text' },
-        { name: 'Read Articles', description: 'Explore wellness topics', href: '/articles', icon: BookOpenIcon, color: 'bg-card-orange-from text-card-orange-text' },
+        { name: t('dashboard.quickStart.bloodAnalysis'), description: t('dashboard.quickStart.bloodAnalysisDesc'), href: '/blood-test', icon: DocumentTextIcon, color: 'bg-card-blue-from text-card-blue-text' },
+        { name: t('dashboard.quickStart.aiAssistant'), description: t('dashboard.quickStart.aiAssistantDesc'), href: '/assistant', icon: SparklesIcon, color: 'bg-card-purple-from text-card-purple-text' },
+        { name: t('dashboard.quickStart.viewBiomarkers'), description: t('dashboard.quickStart.viewBiomarkersDesc'), href: '/biomarkers', icon: ChartBarIcon, color: 'bg-card-teal-from text-card-teal-text' },
+        { name: t('dashboard.quickStart.readArticles'), description: t('dashboard.quickStart.readArticlesDesc'), href: '/articles', icon: BookOpenIcon, color: 'bg-card-orange-from text-card-orange-text' },
     ];
 
     return (
         <div className="bg-surface rounded-2xl shadow-soft border border-gray-200/60 p-6">
-            <h3 className="font-bold text-on-surface">Quick Start</h3>
+            <h3 className="font-bold text-on-surface">{t('dashboard.quickStartTitle')}</h3>
             <div className="mt-4 space-y-3">
                 {items.map(item => (
                     <Link key={item.name} to={item.href} className="flex items-center p-3 rounded-lg hover:bg-gray-50 transition-colors group">
@@ -252,6 +262,7 @@ const QuickStartCardSkeleton: React.FC = () => (
 
 const DashboardPage: React.FC = () => {
     const { user } = useAuth();
+    const { t } = useTranslation();
     const [allBiomarkers, setAllBiomarkers] = useState<Biomarker[]>([]);
     const [dailyTip, setDailyTip] = useState<string>('');
     const [latestRecommendations, setLatestRecommendations] = useState<string[]>([]);
@@ -275,7 +286,6 @@ const DashboardPage: React.FC = () => {
                     }
                 }
 
-                // For the daily tip, we can continue to use a simple cache to avoid calling Gemini API on every load
                 const today = new Date().toISOString().split('T')[0];
                 const DAILY_TIP_STORAGE_KEY = 'everliv_health_daily_tip';
                 let tip = '';
@@ -299,7 +309,6 @@ const DashboardPage: React.FC = () => {
 
             } catch (error) {
                 console.error("Error loading dashboard data:", error);
-                // Handle error state in UI if necessary
             } finally {
                 setIsLoading(false);
             }
@@ -315,8 +324,8 @@ const DashboardPage: React.FC = () => {
                 <div className="flex items-center gap-3">
                     <img src={user.avatarUrl} alt="User Avatar" className="w-14 h-14 rounded-full shadow-soft-md border-2 border-white" />
                     <div>
-                        <h1 className="text-3xl font-bold text-on-surface">Hello, {user.name.split(' ')[0]}!</h1>
-                        <p className="text-on-surface-variant">Welcome back to your health dashboard.</p>
+                        <h1 className="text-3xl font-bold text-on-surface">{t('dashboard.greeting', { name: user.name.split(' ')[0] })}</h1>
+                        <p className="text-on-surface-variant">{t('dashboard.welcome')}</p>
                     </div>
                 </div>
             </header>
