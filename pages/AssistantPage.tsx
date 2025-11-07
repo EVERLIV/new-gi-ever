@@ -5,19 +5,11 @@ import { apiService } from '../services/apiService';
 import type { ChatMessage, Biomarker, BloodTestAnalysis } from '../types';
 import { MessageSender } from '../types';
 import Button from '../components/ui/Button';
-import { PaperAirplaneIcon, UserCircleIcon, SparklesIcon, MicrophoneIcon, PaperClipIcon, XMarkIcon, StopCircleIcon, MagnifyingGlassIcon } from '../components/icons/IconComponents';
+import { ArrowUpIcon, SparklesIcon, PlusIcon, XMarkIcon, MagnifyingGlassIcon, AdjustmentsHorizontalIcon, ClockIcon, ChevronDownIcon } from '../components/icons/IconComponents';
 import { useAuth } from '../contexts/AuthContext';
 import type { Chat } from '@google/genai';
 
-// SpeechRecognition API might not be on the window type
-declare global {
-    interface Window {
-        SpeechRecognition: any;
-        webkitSpeechRecognition: any;
-    }
-}
-
-const MAX_CHARS = 1000;
+const MAX_CHARS = 1152;
 
 
 const fileToBase64 = (file: File): Promise<string> =>
@@ -33,7 +25,7 @@ const fileToBase64 = (file: File): Promise<string> =>
     });
 
 
-const ChatMessageBubble: React.FC<{ message: ChatMessage; searchQuery?: string }> = ({ message, searchQuery = '' }) => {
+const ChatMessageBubble: React.FC<{ message: ChatMessage; searchQuery?: string; id: string; }> = ({ message, searchQuery = '', id }) => {
     const isUser = message.sender === MessageSender.USER;
     const isAiTyping = !isUser && message.text === '' && !message.image;
     
@@ -55,7 +47,7 @@ const ChatMessageBubble: React.FC<{ message: ChatMessage; searchQuery?: string }
     };
 
     return (
-        <div className={`flex items-start gap-3 w-full ${isUser ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
+        <div id={id} className={`flex items-start gap-3 w-full ${isUser ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
             {!isUser && 
                 <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-br from-primary-light to-primary flex items-center justify-center shadow-soft">
                     <SparklesIcon className="h-6 w-6 text-white" />
@@ -75,11 +67,6 @@ const ChatMessageBubble: React.FC<{ message: ChatMessage; searchQuery?: string }
                     </div>
                  )}
             </div>
-             {isUser && 
-                <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                    <UserCircleIcon className="h-7 w-7 text-gray-500" />
-                </div>
-            }
         </div>
     );
 };
@@ -91,59 +78,75 @@ const AssistantPage: React.FC = () => {
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [selectedImage, setSelectedImage] = useState<{ file: File, previewUrl: string } | null>(null);
-    const [isRecording, setIsRecording] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [isInitialized, setIsInitialized] = useState(false);
+
+    const [useProfileContext, setUseProfileContext] = useState(true);
+    const [useBiomarkersContext, setUseBiomarkersContext] = useState(true);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     
     const chatRef = useRef<Chat | null>(null);
-    const recognitionRef = useRef<any>(null);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const messagesEndRef = useRef<HTMLDivElement | null>(null);
+    const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
     const latestAnalysisRef = useRef<BloodTestAnalysis | null>(null);
-
+    const controlsRef = useRef<HTMLDivElement>(null);
+    
     useEffect(() => {
         const initializeChat = async () => {
+            setIsInitialized(false);
             try {
-                const [chatHistory, biomarkers] = await Promise.all([
+                const [chatHistory] = await Promise.all([
                     apiService.getChatHistory(),
-                    apiService.getBiomarkers()
                 ]);
 
-                const initialMessages = chatHistory.length > 0 ? chatHistory : [{ sender: MessageSender.AI, text: t('assistant.initialMessage') }];
-                setMessages(initialMessages);
+                const biomarkers = useBiomarkersContext ? await apiService.getBiomarkers() : [];
+                
+                const userForContext = { ...user };
+                if (!useProfileContext) {
+                    delete userForContext.healthProfile;
+                }
 
-                chatRef.current = createChatWithContext(user, biomarkers);
+                const latestInitialMessage = t('assistant.initialMessage');
+                let messagesToSet;
+
+                const oldEnglishMessage = "Hello! I'm your AI Health Assistant. I can now analyze blood test reports directly from our chat. How can I help you today?";
+
+                if (chatHistory.length > 0 && chatHistory[0].sender === MessageSender.AI && chatHistory[0].text === oldEnglishMessage) {
+                    chatHistory[0].text = latestInitialMessage;
+                    messagesToSet = chatHistory;
+                } else if (chatHistory.length > 0) {
+                    messagesToSet = chatHistory;
+                } else {
+                    messagesToSet = [{ sender: MessageSender.AI, text: latestInitialMessage }];
+                }
+
+                setMessages(messagesToSet);
+                chatRef.current = createChatWithContext(userForContext, biomarkers);
             } catch (error) {
                 console.error("Failed to initialize chat:", error);
                 setMessages([{ sender: MessageSender.AI, text: "Sorry, I'm having trouble connecting. Please try again later." }]);
-            }
-
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (SpeechRecognition) {
-                recognitionRef.current = new SpeechRecognition();
-                recognitionRef.current.continuous = true;
-                recognitionRef.current.interimResults = true;
-                recognitionRef.current.lang = 'ru-RU';
-                recognitionRef.current.onresult = (event: any) => {
-                    let finalTranscript = '';
-                    for (let i = event.resultIndex; i < event.results.length; ++i) {
-                        if (event.results[i].isFinal) {
-                            finalTranscript += event.results[i][0].transcript;
-                        }
-                    }
-                     if (finalTranscript) {
-                        setInput(currentInput => (currentInput + ' ' + finalTranscript).trim());
-                    }
-                };
             }
             setIsInitialized(true);
         };
         
         initializeChat();
-
-        return () => { if (recognitionRef.current) recognitionRef.current.stop(); };
-    }, [user, t]);
+    }, [user, t, useProfileContext, useBiomarkersContext]);
+    
+    // Effect to handle closing dropdowns on outside click
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (controlsRef.current && !controlsRef.current.contains(event.target as Node)) {
+                setIsSettingsOpen(false);
+                setIsHistoryOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
 
     useEffect(() => {
         const handler = setTimeout(() => {
@@ -165,7 +168,8 @@ const AssistantPage: React.FC = () => {
     useEffect(() => {
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
-            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+            const scrollHeight = textareaRef.current.scrollHeight;
+            textareaRef.current.style.height = `${scrollHeight}px`;
         }
     }, [input]);
 
@@ -316,27 +320,28 @@ const AssistantPage: React.FC = () => {
         if (file) {
             setSelectedImage({ file, previewUrl: URL.createObjectURL(file) });
         }
-    };
-    
-    const toggleRecording = () => {
-        if (!recognitionRef.current) return;
-        if (isRecording) {
-            recognitionRef.current.stop();
-            setIsRecording(false);
-        } else {
-            recognitionRef.current.start();
-            setIsRecording(true);
+        // Reset file input value to allow selecting the same file again
+        if (event.target) {
+            event.target.value = '';
         }
     };
-
-    const filteredMessages = searchQuery
-        ? messages.filter(msg =>
-            msg.text.toLowerCase().includes(searchQuery.toLowerCase())
-          )
-        : messages;
+    
+    const messagesWithOriginalIndex = messages.map((msg, index) => ({ ...msg, originalIndex: index }));
+    const displayedMessages = searchQuery
+        ? messagesWithOriginalIndex.filter(msg => msg.text.toLowerCase().includes(searchQuery.toLowerCase()))
+        : messagesWithOriginalIndex;
 
     return (
         <div className="flex flex-col h-full bg-transparent">
+            {/* Hidden file input for image attachments */}
+            <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageSelect}
+                className="hidden"
+                accept="image/png, image/jpeg"
+            />
+
             <div className="flex-shrink-0 p-3 sm:p-4 border-b border-gray-200/80 bg-background/80 backdrop-blur-sm">
                 <div className="relative">
                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -365,13 +370,14 @@ const AssistantPage: React.FC = () => {
 
             <div id="chat-container" className="flex-grow p-4 sm:p-6 overflow-y-auto">
                 <div className="space-y-6">
-                    {filteredMessages.length > 0 ? (
-                        filteredMessages.map((msg, index) => <ChatMessageBubble key={index} message={msg} searchQuery={searchQuery} />)
+                    {displayedMessages.length > 0 ? (
+                        displayedMessages.map((msg) => <ChatMessageBubble key={msg.originalIndex} id={`message-${msg.originalIndex}`} message={msg} searchQuery={searchQuery} />)
                     ) : (
                         searchQuery && (
                             <div className="text-center py-10 text-on-surface-variant">
                                 <MagnifyingGlassIcon className="mx-auto h-12 w-12 opacity-50" />
                                 <p className="mt-4 font-semibold">{t('assistant.noResults', { query: searchQuery })}</p>
+
                                 <p className="text-sm">{t('assistant.noResultsHint')}</p>
                             </div>
                         )
@@ -394,52 +400,84 @@ const AssistantPage: React.FC = () => {
                 </div>
             </div>
             <div className="flex-shrink-0 p-3 sm:p-4 border-t border-gray-200/80 bg-background/80 backdrop-blur-sm">
-                <div className="bg-surface rounded-xl shadow-soft border border-gray-200/60 flex items-center p-2 gap-2">
-                    <input type="file" ref={fileInputRef} onChange={handleImageSelect} className="hidden" accept="image/*" />
-                    <button 
-                        title={t('assistant.attachImage')}
-                        onClick={() => fileInputRef.current?.click()} 
-                        disabled={isLoading} 
-                        className="p-2 rounded-full text-on-surface-variant hover:bg-gray-100 transition-colors disabled:opacity-50 flex-shrink-0"
-                        aria-label={t('assistant.attachImage')}>
-                        <PaperClipIcon className="h-6 w-6" />
-                    </button>
-                    <button 
-                        title={isRecording ? t('assistant.stopRecording') : t('assistant.startRecording')}
-                        onClick={toggleRecording} 
-                        disabled={isLoading} 
-                        className={`p-2 rounded-full transition-colors disabled:opacity-50 flex-shrink-0 ${isRecording ? 'text-red-500 bg-red-100' : 'text-on-surface-variant hover:bg-gray-100'}`} 
-                        aria-label={isRecording ? t('assistant.stopRecording') : t('assistant.startRecording')}>
-                        {isRecording ? <StopCircleIcon className="h-6 w-6"/> : <MicrophoneIcon className="h-6 w-6" />}
-                    </button>
-                    <textarea
+                 <div className="bg-gray-100 rounded-2xl p-3 max-w-3xl mx-auto flex flex-col gap-2 shadow-soft-md border border-gray-200/80">
+                    {selectedImage && (
+                        <div className="px-1 pt-1">
+                            <div className="relative inline-block">
+                                <img src={selectedImage.previewUrl} alt="Preview" className="h-20 w-20 object-cover rounded-lg"/>
+                                <button onClick={() => setSelectedImage(null)} className="absolute -top-2 -right-2 bg-gray-700 text-white rounded-full p-0.5 shadow-md hover:bg-red-600 transition-colors">
+                                    <XMarkIcon className="h-4 w-4" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                     <textarea
                         ref={textareaRef}
                         rows={1}
-                        className="flex-1 block w-full bg-transparent resize-none max-h-40 p-1 border-0 focus:ring-0 sm:text-sm placeholder-on-surface-variant text-on-surface"
-                        placeholder={isRecording ? t('assistant.listening') : t('assistant.inputPlaceholder')}
+                        className="block w-full bg-transparent resize-none max-h-40 px-2 py-1 border-0 focus:ring-0 sm:text-sm placeholder-on-surface-variant/80 text-on-surface"
+                        placeholder={t('assistant.replyPlaceholder')}
                         value={input}
                         onChange={(e) => setInput(e.target.value.slice(0, MAX_CHARS))}
-                        onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }}}
+                        onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && (input.trim() || selectedImage)) { e.preventDefault(); handleSend(); }}}
                         disabled={isLoading || !isInitialized}
                     />
-                    <Button 
-                        onClick={handleSend} 
-                        isLoading={isLoading} 
-                        disabled={(!input.trim() && !selectedImage) || !isInitialized} 
-                        className="h-10 w-10 p-0 flex-shrink-0 rounded-lg" 
-                        aria-label={t('assistant.sendMessage')}
-                        title={t('assistant.sendMessage')}>
-                       {!isLoading && <PaperAirplaneIcon className="h-5 w-5" />}
-                    </Button>
-                </div>
-                {selectedImage && (
-                    <div className="text-xs text-on-surface-variant mt-2 px-2 flex justify-between items-center">
-                       <span>{t('assistant.imageAttached')} <span className="font-medium text-on-surface">{selectedImage.file.name}</span></span>
-                       <button onClick={() => setSelectedImage(null)} className="p-1 rounded-full hover:bg-red-100">
-                           <XMarkIcon className="h-4 w-4 text-red-600" />
-                       </button>
+                    <div className="flex items-center justify-between gap-2">
+                        <div ref={controlsRef} className="flex items-center gap-1.5 relative">
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                className="h-9 w-9 flex items-center justify-center rounded-lg bg-white/60 border border-gray-300/70 text-on-surface-variant hover:bg-white/90 hover:border-gray-400 transition-colors disabled:opacity-50"
+                                disabled={isLoading || !isInitialized}
+                                aria-label={t('assistant.attachImage')}
+                                title={t('assistant.attachImage')}
+                            >
+                                <PlusIcon className="h-5 w-5"/>
+                            </button>
+                             <button onClick={() => setIsSettingsOpen(prev => !prev)} className="h-9 w-9 flex items-center justify-center rounded-lg bg-white/60 border border-gray-300/70 text-on-surface-variant hover:bg-white/90 hover:border-gray-400 transition-colors disabled:opacity-50" disabled={isLoading || !isInitialized}><AdjustmentsHorizontalIcon className="h-5 w-5"/></button>
+                             <button onClick={() => setIsHistoryOpen(prev => !prev)} className="h-9 w-9 flex items-center justify-center rounded-lg bg-white/60 border border-gray-300/70 text-on-surface-variant hover:bg-white/90 hover:border-gray-400 transition-colors disabled:opacity-50" disabled={isLoading || !isInitialized}><ClockIcon className="h-5 w-5"/></button>
+                        
+                            {isSettingsOpen && (
+                                <div className="absolute bottom-full mb-2 w-64 bg-surface text-on-surface rounded-lg shadow-lg p-2 z-10 animate-fadeIn border border-gray-200">
+                                    <label className="flex items-center justify-between p-2 hover:bg-gray-100 rounded cursor-pointer">
+                                        <span className="text-sm font-medium">Использовать профиль</span>
+                                        <input type="checkbox" checked={useProfileContext} onChange={e => setUseProfileContext(e.target.checked)} className="sr-only peer" />
+                                        <div className="relative w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                                    </label>
+                                    <label className="flex items-center justify-between p-2 hover:bg-gray-100 rounded cursor-pointer">
+                                        <span className="text-sm font-medium">Использовать биомаркеры</span>
+                                        <input type="checkbox" checked={useBiomarkersContext} onChange={e => setUseBiomarkersContext(e.target.checked)} className="sr-only peer" />
+                                        <div className="relative w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                                    </label>
+                                </div>
+                            )}
+
+                             {isHistoryOpen && (
+                                <div className="absolute bottom-full mb-2 w-64 bg-surface text-on-surface rounded-lg shadow-lg p-4 z-10 animate-fadeIn border border-gray-200">
+                                    <p className="text-sm text-center">История чата скоро появится.</p>
+                                </div>
+                            )}
+                        </div>
+                       
+                        <div className="flex items-center gap-3">
+                             <div className="hidden sm:flex items-center gap-1 text-sm text-on-surface-variant/80 cursor-default">
+                                <span>Gemini 2.5</span>
+                                <ChevronDownIcon className="h-4 w-4"/>
+                            </div>
+                            <Button
+                                onClick={handleSend}
+                                isLoading={isLoading}
+                                disabled={isLoading || !isInitialized || (!input.trim() && !selectedImage)}
+                                className="bg-on-surface-variant hover:bg-on-surface text-white rounded-md h-9 w-9 p-0 flex-shrink-0"
+                                aria-label={t('assistant.sendMessage')}
+                                title={t('assistant.sendMessage')}
+                            >
+                                <ArrowUpIcon className="h-5 w-5" />
+                            </Button>
+                        </div>
                     </div>
-                )}
+                </div>
+                <p className="text-xs text-on-surface-variant text-center mt-2 px-4 max-w-3xl mx-auto">
+                    {t('assistant.disclaimer')}
+                </p>
             </div>
         </div>
     );

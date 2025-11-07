@@ -3,17 +3,18 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Button from '../components/ui/Button';
 import { useAuth } from '../contexts/AuthContext';
-import { GoogleIcon } from '../components/icons/IconComponents';
+import { GoogleIcon, EyeIcon, EyeSlashIcon } from '../components/icons/IconComponents';
 
 const LoginPage: React.FC = () => {
     const { t } = useTranslation();
     const [isLoginView, setIsLoginView] = useState(true);
     const [name, setName] = useState('');
-    const [email, setEmail] = useState('alex.doe@example.com');
-    const [password, setPassword] = useState('password123');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+    const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     
     const navigate = useNavigate();
     const location = useLocation();
@@ -26,6 +27,12 @@ const LoginPage: React.FC = () => {
         setIsLoading(true);
         setError('');
 
+        if (!isLoginView && password.length < 6) {
+            setError(t('login.errorWeakPassword'));
+            setIsLoading(false);
+            return;
+        }
+
         try {
             if (isLoginView) {
                 await auth.login(email, password);
@@ -34,7 +41,23 @@ const LoginPage: React.FC = () => {
             }
             navigate(from, { replace: true });
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+            const firebaseError = err as { code?: string; message: string };
+            switch (firebaseError.code) {
+                case 'auth/invalid-credential':
+                case 'auth/wrong-password':
+                case 'auth/user-not-found':
+                    setError(t('login.errorInvalidCredentials'));
+                    break;
+                case 'auth/email-already-in-use':
+                    setError(t('login.errorEmailInUse'));
+                    break;
+                case 'auth/weak-password':
+                    setError(t('login.errorWeakPassword'));
+                    break;
+                default:
+                    setError(firebaseError.message || 'An unknown error occurred.');
+                    break;
+            }
         } finally {
             setIsLoading(false);
         }
@@ -47,7 +70,12 @@ const LoginPage: React.FC = () => {
             await auth.loginWithGoogle();
             navigate(from, { replace: true });
         } catch (err) {
-             setError(err instanceof Error ? err.message : 'An unknown error occurred during Google Sign-in.');
+            const error = err as { code?: string; message: string };
+            if (error.code === 'auth/popup-closed-by-user') {
+                setError('');
+            } else {
+                setError(error.message || 'An unknown error occurred during Google Sign-in.');
+            }
         } finally {
             setIsGoogleLoading(false);
         }
@@ -89,6 +117,7 @@ const LoginPage: React.FC = () => {
                                         required
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
+                                        placeholder={t('login.nameLabel')}
                                         className="block w-full px-4 py-2.5 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm text-on-surface"
                                     />
                                 </div>
@@ -107,6 +136,7 @@ const LoginPage: React.FC = () => {
                                     required
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
+                                    placeholder={t('login.emailLabel')}
                                     className="block w-full px-4 py-2.5 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm text-on-surface"
                                 />
                             </div>
@@ -116,17 +146,30 @@ const LoginPage: React.FC = () => {
                             <label htmlFor="password"className="block text-sm font-medium text-on-surface-variant">
                                 {t('login.passwordLabel')}
                             </label>
-                            <div className="mt-1">
+                            <div className="mt-1 relative">
                                 <input
                                     id="password"
                                     name="password"
-                                    type="password"
+                                    type={isPasswordVisible ? 'text' : 'password'}
                                     autoComplete="current-password"
                                     required
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="block w-full px-4 py-2.5 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm text-on-surface"
+                                    placeholder={t('login.passwordLabel')}
+                                    className="block w-full px-4 py-2.5 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm text-on-surface pr-10"
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setIsPasswordVisible(!isPasswordVisible)}
+                                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-on-surface-variant hover:text-on-surface"
+                                    aria-label={isPasswordVisible ? t('login.hidePassword') : t('login.showPassword')}
+                                >
+                                    {isPasswordVisible ? (
+                                        <EyeSlashIcon className="h-5 w-5" />
+                                    ) : (
+                                        <EyeIcon className="h-5 w-5" />
+                                    )}
+                                </button>
                             </div>
                         </div>
 

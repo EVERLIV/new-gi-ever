@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
-import { getDailyHealthTip } from '../services/geminiService';
-import type { Biomarker, BloodTestRecord } from '../types';
+import { getDailyHealthTip, generateDashboardActionPlan } from '../services/geminiService';
+import type { Biomarker, BloodTestRecord, ActionPlan } from '../types';
 import { apiService } from '../services/apiService';
 import {
   SparklesIcon,
@@ -15,6 +15,8 @@ import {
   ChevronRightIcon,
   LightBulbIcon,
   ClipboardDocumentListIcon,
+  BoltIcon,
+  CalendarDaysIcon,
 } from '../components/icons/IconComponents';
 
 const Skeleton: React.FC<{ className?: string }> = ({ className = '' }) => (
@@ -49,27 +51,38 @@ const RecommendationCardSkeleton: React.FC = () => (
     </div>
 );
 
-const LatestRecommendationsCard: React.FC<{ recommendations: string[] }> = ({ recommendations }) => {
+const ActionPlanCard: React.FC<{ plan: ActionPlan }> = ({ plan }) => {
     const { t } = useTranslation();
+    const sections = [
+        { title: t('dashboard.actionPlan.nutrition'), items: plan.nutrition, icon: <ClipboardDocumentListIcon className="h-6 w-6 text-card-blue-text" /> },
+        { title: t('dashboard.actionPlan.lifestyle'), items: plan.lifestyle, icon: <BoltIcon className="h-6 w-6 text-card-teal-text" /> },
+        { title: t('dashboard.actionPlan.monitoring'), items: plan.monitoring, icon: <CalendarDaysIcon className="h-6 w-6 text-card-purple-text" /> },
+    ];
+
     return (
         <div className="bg-gradient-to-br from-card-blue-from to-card-blue-to rounded-2xl shadow-soft border border-blue-200/80 p-6 flex flex-col">
-            <div className="flex items-center">
-                <div className="flex-shrink-0 bg-white/70 rounded-full p-2 mr-4">
-                    <ClipboardDocumentListIcon className="h-6 w-6 text-card-blue-text" />
-                </div>
-                <h3 className="font-bold text-card-blue-text text-lg">
-                    {t('dashboard.actionPlanTitle')}
-                </h3>
-            </div>
-            <ul className="mt-4 space-y-3 flex-grow">
-                {recommendations.slice(0, 3).map((rec, index) => (
-                    <li key={index} className="flex items-start">
-                        <CheckCircleIcon className="h-5 w-5 text-primary/80 mr-3 mt-0.5 flex-shrink-0" />
-                        <span className="text-on-surface-variant text-sm">{rec}</span>
-                    </li>
+            <h3 className="font-bold text-card-blue-text text-lg mb-4">
+                {t('dashboard.actionPlanTitle')}
+            </h3>
+            <div className="space-y-5">
+                {sections.map(section => (
+                    <div key={section.title}>
+                        <h4 className="font-semibold text-on-surface flex items-center mb-2">
+                            <span className="flex-shrink-0 w-8 h-8 rounded-full bg-white/70 flex items-center justify-center mr-3">{section.icon}</span>
+                            {section.title}
+                        </h4>
+                        <ul className="space-y-2 pl-4">
+                            {section.items.map((item, index) => (
+                                <li key={index} className="flex items-start">
+                                    <CheckCircleIcon className="h-5 w-5 text-primary/80 mr-3 mt-0.5 flex-shrink-0" />
+                                    <span className="text-on-surface-variant text-sm">{item}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
                 ))}
-            </ul>
-            <div className="mt-auto text-center pt-4">
+            </div>
+             <div className="mt-auto text-center pt-6">
                 <Link to="/biomarkers" className="inline-flex items-center px-5 py-2 text-sm font-semibold text-primary bg-white/90 rounded-xl shadow-soft hover:bg-white transition-all transform hover:-translate-y-0.5 hover:shadow-soft-md">
                     {t('dashboard.viewAllRecommendations')}
                     <ChevronRightIcon className="w-4 h-4 ml-1.5" />
@@ -79,27 +92,32 @@ const LatestRecommendationsCard: React.FC<{ recommendations: string[] }> = ({ re
     );
 };
 
-
-const LatestRecommendationsCardSkeleton: React.FC = () => (
+const ActionPlanCardSkeleton: React.FC = () => (
     <div className="bg-gray-100 rounded-2xl shadow-soft p-6 flex flex-col">
-        <div className="flex items-center">
-            <Skeleton className="h-10 w-10 rounded-full mr-4" />
-            <Skeleton className="h-5 w-1/2" />
-        </div>
-        <div className="mt-4 space-y-4 flex-grow">
-            {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="flex items-start">
-                    <Skeleton className="h-5 w-5 rounded-full mr-3" />
-                    <Skeleton className="h-4 w-5/6" />
+        <Skeleton className="h-6 w-3/4 mb-6" />
+        {Array.from({ length: 3 }).map((_, i) => (
+             <div key={i} className="mb-5">
+                <div className="flex items-center mb-3">
+                    <Skeleton className="h-8 w-8 rounded-full mr-3" />
+                    <Skeleton className="h-5 w-1/3" />
                 </div>
-            ))}
-        </div>
+                <div className="space-y-3 pl-4">
+                    <div className="flex items-start">
+                        <Skeleton className="h-5 w-5 rounded-full mr-3" />
+                        <Skeleton className="h-4 w-5/6" />
+                    </div>
+                     <div className="flex items-start">
+                        <Skeleton className="h-5 w-5 rounded-full mr-3" />
+                        <Skeleton className="h-4 w-4/6" />
+                    </div>
+                </div>
+            </div>
+        ))}
         <div className="mt-auto pt-4 flex justify-center">
             <Skeleton className="h-9 w-48 rounded-xl" />
         </div>
     </div>
 );
-
 
 
 const AttentionBiomarkers: React.FC<{ biomarkers: Biomarker[] }> = ({ biomarkers }) => {
@@ -265,84 +283,102 @@ const DashboardPage: React.FC = () => {
     const { t } = useTranslation();
     const [allBiomarkers, setAllBiomarkers] = useState<Biomarker[]>([]);
     const [dailyTip, setDailyTip] = useState<string>('');
-    const [latestRecommendations, setLatestRecommendations] = useState<string[]>([]);
+    const [actionPlan, setActionPlan] = useState<ActionPlan | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
+    // Effect 1: Load core data (biomarkers) from Firestore.
+    // This is the fast, essential data needed to render the page quickly.
     useEffect(() => {
-        const loadDashboardData = async () => {
+        const loadCoreData = async () => {
             setIsLoading(true);
             try {
-                const [biomarkers, testHistory] = await Promise.all([
-                    apiService.getBiomarkers(),
-                    apiService.getTestHistory()
-                ]);
-                
+                const biomarkers = await apiService.getBiomarkers();
                 setAllBiomarkers(biomarkers);
-
-                if (testHistory.length > 0) {
-                    const lastTest = testHistory[testHistory.length - 1];
-                    if (lastTest.analysis && lastTest.analysis.recommendations) {
-                        setLatestRecommendations(lastTest.analysis.recommendations);
-                    }
-                }
-
-                const today = new Date().toISOString().split('T')[0];
-                const DAILY_TIP_STORAGE_KEY = 'everliv_health_daily_tip';
-                let tip = '';
-                try {
-                    const storedTip = window.localStorage.getItem(DAILY_TIP_STORAGE_KEY);
-                    if (storedTip) {
-                        const cachedTipData = JSON.parse(storedTip);
-                        if (cachedTipData && cachedTipData.date === today) {
-                            tip = cachedTipData.tip;
-                        }
-                    }
-                } catch (error) {
-                    console.error("Error reading cached daily tip:", error);
-                }
-                
-                if (!tip) {
-                    tip = await getDailyHealthTip(user, biomarkers);
-                    window.localStorage.setItem(DAILY_TIP_STORAGE_KEY, JSON.stringify({ tip, date: today }));
-                }
-                setDailyTip(tip);
-
             } catch (error) {
-                console.error("Error loading dashboard data:", error);
+                console.error("Error loading core dashboard data:", error);
             } finally {
                 setIsLoading(false);
             }
         };
 
-        loadDashboardData();
-    }, [user]);
+        if (user.healthProfile) {
+            loadCoreData();
+        } else {
+            setIsLoading(false); // If no profile, nothing to load.
+        }
+    }, [user.healthProfile]);
+
+    // Effect 2: Load slower, AI-generated content in the background.
+    // This runs after the core data is loaded.
+    useEffect(() => {
+        // Don't run if core data is still loading or if there's no profile.
+        if (isLoading || !user.healthProfile) {
+            return;
+        }
+
+        const loadAiData = async () => {
+            // Generate Action Plan if the user has test history
+            try {
+                const testHistory = await apiService.getTestHistory();
+                if (testHistory.length > 0) {
+                    const lastTest = testHistory[testHistory.length - 1];
+                    if (lastTest.analysis && lastTest.analysis.summary) {
+                         const plan = await generateDashboardActionPlan(user, allBiomarkers, lastTest.analysis.summary);
+                         setActionPlan(plan);
+                    }
+                }
+            } catch (error) {
+                console.error("Error generating action plan:", error);
+            }
+           
+            // Generate Daily Tip, checking cache first
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const DAILY_TIP_STORAGE_KEY = 'everliv_health_daily_tip';
+                let tip = '';
+                const storedTip = window.localStorage.getItem(DAILY_TIP_STORAGE_KEY);
+                if (storedTip) {
+                    const cachedTipData = JSON.parse(storedTip);
+                    if (cachedTipData && cachedTipData.date === today && cachedTipData.tip) {
+                        tip = cachedTipData.tip;
+                    }
+                }
+                
+                if (!tip) {
+                    tip = await getDailyHealthTip(user, allBiomarkers);
+                    window.localStorage.setItem(DAILY_TIP_STORAGE_KEY, JSON.stringify({ tip, date: today }));
+                }
+                setDailyTip(tip);
+            } catch (error) {
+                 console.error("Error generating daily tip:", error);
+                 // Provide a fallback tip on error
+                 setDailyTip(t('assistant.generalError'));
+            }
+        };
+        
+        loadAiData();
+    }, [isLoading, allBiomarkers, user, t]);
     
 
     return (
         <div className="max-w-7xl mx-auto space-y-8 animate-fadeIn pb-10">
             <header>
-                <div className="flex items-center gap-3">
-                    <img src={user.avatarUrl} alt="User Avatar" className="w-14 h-14 rounded-full shadow-soft-md border-2 border-white" />
-                    <div>
-                        <h1 className="text-3xl font-bold text-on-surface">{t('dashboard.greeting', { name: user.name.split(' ')[0] })}</h1>
-                        <p className="text-on-surface-variant">{t('dashboard.welcome')}</p>
-                    </div>
+                <div>
+                    <h1 className="text-3xl font-bold text-on-surface">{t('dashboard.greeting', { name: user.name.split(' ')[0] })}</h1>
+                    <p className="text-on-surface-variant">{t('dashboard.welcome')}</p>
                 </div>
             </header>
 
-            {isLoading ? <RecommendationCardSkeleton /> : <RecommendationCard tip={dailyTip} />}
+            {isLoading ? <QuickStartCardSkeleton /> : <QuickStartCard />}
+            
+            {dailyTip ? <RecommendationCard tip={dailyTip} /> : <RecommendationCardSkeleton />}
             
             <div className="space-y-6 lg:space-y-0 lg:grid lg:grid-cols-3 lg:gap-6">
                 <div className="lg:col-span-2 space-y-6">
-                    {isLoading ? (
-                         <LatestRecommendationsCardSkeleton />
-                    ) : (
-                        latestRecommendations.length > 0 && <LatestRecommendationsCard recommendations={latestRecommendations} />
-                    )}
+                    {actionPlan ? <ActionPlanCard plan={actionPlan} /> : <ActionPlanCardSkeleton />}
                     {isLoading ? <AttentionBiomarkersSkeleton /> : <AttentionBiomarkers biomarkers={allBiomarkers} />}
                 </div>
                 <div className="lg:col-span-1 space-y-6">
-                     {isLoading ? <QuickStartCardSkeleton /> : <QuickStartCard />}
                      {isLoading ? <HealthChecklistSkeleton /> : <HealthChecklist />}
                 </div>
             </div>

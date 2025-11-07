@@ -194,11 +194,11 @@ const TestResultModal: React.FC<{ testRecord: BloodTestRecord; onClose: () => vo
 
 const RecommendationSection: React.FC<{ title: string; items: string[]; icon: React.ReactNode }> = ({ title, items, icon }) => (
     <div>
-        <h5 className="font-semibold text-on-surface flex items-center">
-            <span className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mr-3">{icon}</span>
-            {title}
-        </h5>
-        <ul className="mt-2 pl-6 space-y-1.5 text-on-surface-variant list-disc list-outside">
+        <div className="flex flex-col sm:flex-row sm:items-center">
+            <span className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mb-2 sm:mb-0 sm:mr-3">{icon}</span>
+            <h5 className="font-semibold text-on-surface">{title}</h5>
+        </div>
+        <ul className="mt-2 pl-4 sm:pl-11 space-y-1.5 text-on-surface-variant list-disc list-outside">
             {items.map((item, index) => <li key={index} className="pl-2">{item}</li>)}
         </ul>
     </div>
@@ -363,13 +363,13 @@ const BiomarkerDetailView: React.FC<{
                                 <RecommendationSection title={t('biomarkers.detail.lifestyle')} items={biomarker.recommendations.lifestyle} icon={<BoltIcon className="h-5 w-5 text-primary" />} />
                                 <RecommendationSection title={t('biomarkers.detail.supplements')} items={biomarker.recommendations.supplements} icon={<CubeIcon className="h-5 w-5 text-primary" />} />
                                 <div>
-                                    <h5 className="font-semibold text-on-surface flex items-center">
-                                        <span className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mr-3">
+                                    <div className="flex flex-col sm:flex-row sm:items-center">
+                                        <span className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mb-2 sm:mb-0 sm:mr-3">
                                             <CalendarDaysIcon className="h-5 w-5 text-primary" />
                                         </span>
-                                        {t('biomarkers.detail.nextAnalysis')}
-                                    </h5>
-                                    <p className="mt-2 pl-11 text-on-surface-variant">{biomarker.recommendations.next_checkup}</p>
+                                        <h5 className="font-semibold text-on-surface">{t('biomarkers.detail.nextAnalysis')}</h5>
+                                    </div>
+                                    <p className="mt-2 pl-4 sm:pl-11 text-on-surface-variant">{biomarker.recommendations.next_checkup}</p>
                                 </div>
                             </div>
                         </Card>

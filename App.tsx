@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useState } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 
@@ -18,6 +19,9 @@ import BottomNavBar from './components/layout/BottomNavBar';
 import UpgradeModal from './components/ui/UpgradeModal';
 import HealthProfileSetupPage from './pages/HealthProfileSetupPage';
 import MindfulMomentsPage from './pages/VideoConsultationPage';
+import ContentManagementPage from './pages/ContentManagementPage';
+import SpecialistsPage from './pages/SpecialistsPage';
+import LandingPage from './pages/LandingPage';
 
 // Initialize Firebase once when the app loads
 initializeFirebase(firebaseConfig);
@@ -55,8 +59,30 @@ const ProRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return <>{children}</>;
 };
 
+// A component to protect Admin-only features
+const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const { isAdmin } = useAuth();
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        if (!isAdmin) {
+            // Redirect non-admins to a safe page.
+            navigate('/dashboard', { replace: true });
+        }
+    }, [isAdmin, navigate]);
+
+    if (!isAdmin) {
+        // Render nothing while redirecting.
+        return null;
+    }
+    
+    return <>{children}</>;
+};
+
+
 const AppContent: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { subscriptionStatus, isUpgradeModalOpen, closeUpgradeModal } = useAuth();
   
   const isAssistantPage = location.pathname === '/assistant';
@@ -69,6 +95,39 @@ const AppContent: React.FC = () => {
       setIsSidebarOpen(true);
     }
   }, [isAssistantPage]);
+
+  // PWA File Handling Logic
+  useEffect(() => {
+    // 1. Handle files from 'share_target' (via Service Worker)
+    const handleSharedFile = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'SHARED_FILE') {
+        const file = event.data.file;
+        if (file instanceof File) {
+          // Navigate to the blood test page and pass the file in the state
+          navigate('/blood-test', { state: { sharedFile: file } });
+        }
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', handleSharedFile);
+
+    // 2. Handle files from 'file_handlers' (via Launch Queue API)
+    if ('launchQueue' in window) {
+      (window as any).launchQueue.setConsumer(async (launchParams: { files: any[] }) => {
+        if (!launchParams.files || launchParams.files.length === 0) {
+          return;
+        }
+        const fileHandle = launchParams.files[0];
+        const file = await fileHandle.getFile();
+        if (file) {
+          navigate('/blood-test', { state: { sharedFile: file } });
+        }
+      });
+    }
+
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', handleSharedFile);
+    };
+  }, [navigate]);
   
   const showBottomNav = !isAssistantPage && subscriptionStatus === 'pro';
 
@@ -86,9 +145,9 @@ const AppContent: React.FC = () => {
         />
         <main className={`flex-1 overflow-x-hidden overflow-y-auto bg-gradient-to-b from-white/30 to-transparent ${!isAssistantPage ? `p-4 sm:p-6 md:p-8 lg:p-10 ${showBottomNav ? 'pb-24 md:pb-8' : ''}` : ''}`}>
           <Routes>
-            <Route path="/" element={<Navigate to={subscriptionStatus === 'pro' ? "/dashboard" : "/assistant"} replace />} />
             <Route path="/assistant" element={<ProtectedRoute><AssistantPage /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+            <Route path="/specialists" element={<ProtectedRoute><SpecialistsPage /></ProtectedRoute>} />
             
             {/* Pro Routes */}
             <Route path="/dashboard" element={<ProtectedRoute><ProRoute><DashboardPage /></ProRoute></ProtectedRoute>} />
@@ -98,6 +157,9 @@ const AppContent: React.FC = () => {
             <Route path="/articles" element={<ProtectedRoute><ProRoute><ArticlesPage /></ProRoute></ProtectedRoute>} />
             <Route path="/articles/:articleTitle" element={<ProtectedRoute><ProRoute><ArticlesPage /></ProRoute></ProtectedRoute>} />
             <Route path="/mindful-moments" element={<ProtectedRoute><ProRoute><MindfulMomentsPage /></ProRoute></ProtectedRoute>} />
+            
+            {/* Admin Route */}
+            <Route path="/content-management" element={<ProtectedRoute><AdminRoute><ContentManagementPage /></AdminRoute></ProtectedRoute>} />
           </Routes>
         </main>
       </div>
@@ -117,6 +179,18 @@ const App: React.FC = () => {
     );
 };
 
+const RootGate: React.FC = () => {
+    const { isAuthenticated, isProfileComplete, subscriptionStatus } = useAuth();
+    if (!isAuthenticated) {
+        return <LandingPage />;
+    }
+    if (!isProfileComplete) {
+        return <HealthProfileSetupPage />;
+    }
+    // If authenticated and profile is complete, redirect to dashboard/assistant
+    return <Navigate to={subscriptionStatus === 'pro' ? "/dashboard" : "/assistant"} replace />;
+};
+
 const AppInitializer: React.FC = () => {
     const { isInitializing } = useAuth();
 
@@ -134,16 +208,16 @@ const AppInitializer: React.FC = () => {
     return (
         <Routes>
             <Route path="/login" element={<LoginPage />} />
-            <Route path="*" element={<AppContentWithAuthCheck />} />
+            <Route path="/" element={<RootGate />} />
+            <Route path="/*" element={<AppContentWithAuthCheck />} />
         </Routes>
     );
 };
 
-
 const AppContentWithAuthCheck: React.FC = () => {
     const { isAuthenticated, isProfileComplete } = useAuth();
     if (!isAuthenticated) {
-        return <Navigate to="/login" replace />;
+        return <Navigate to="/" replace />;
     }
     // If authenticated but profile is not complete, show the setup page.
     if (!isProfileComplete) {

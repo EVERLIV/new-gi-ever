@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { HomeIcon, DocumentTextIcon, SparklesIcon, ChartBarIcon, LockClosedIcon, MoonIcon } from '../icons/IconComponents';
+import { HomeIcon, DocumentTextIcon, SparklesIcon, ChartBarIcon, LockClosedIcon, MoonIcon, UserGroupIcon } from '../icons/IconComponents';
 import { useAuth } from '../../contexts/AuthContext';
 
 const BottomNavItem: React.FC<{ item: any }> = ({ item }) => {
@@ -51,6 +51,7 @@ const BottomNavBar: React.FC = () => {
     { name: t('bottomNav.bloodTest'), href: '/blood-test', icon: DocumentTextIcon, pro: true },
     { name: t('bottomNav.assistant'), href: '/assistant', icon: SparklesIcon, pro: false },
     { name: t('bottomNav.biomarkers'), href: '/biomarkers', icon: ChartBarIcon, pro: true },
+    { name: t('bottomNav.specialists'), href: '/specialists', icon: UserGroupIcon, pro: false },
     { name: t('bottomNav.moments'), href: '/mindful-moments', icon: MoonIcon, pro: true },
   ];
 

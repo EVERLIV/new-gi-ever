@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChartBarIcon, DocumentTextIcon, HomeIcon, SparklesIcon, XMarkIcon, UserCircleIcon, ArrowRightOnRectangleIcon, BookOpenIcon, LockClosedIcon, MoonIcon } from '../icons/IconComponents';
+import { ChartBarIcon, DocumentTextIcon, HomeIcon, SparklesIcon, XMarkIcon, UserCircleIcon, ArrowRightOnRectangleIcon, BookOpenIcon, LockClosedIcon, MoonIcon, ChevronRightIcon, Cog6ToothIcon, UserGroupIcon } from '../icons/IconComponents';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface SidebarProps {
@@ -58,19 +58,25 @@ const NavItem: React.FC<{ item: any; isSidebarOpen: boolean; onClick: () => void
 };
 
 const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setIsSidebarOpen, forceHidden = false }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();
 
-  const navigation = [
-    { name: t('sidebar.dashboard'), href: '/dashboard', icon: HomeIcon, pro: true },
-    { name: t('sidebar.bloodAnalysis'), href: '/blood-test', icon: DocumentTextIcon, pro: true },
-    { name: t('sidebar.mindfulMoments'), href: '/mindful-moments', icon: MoonIcon, pro: true },
-    { name: t('sidebar.aiAssistant'), href: '/assistant', icon: SparklesIcon, pro: false },
-    { name: t('sidebar.biomarkers'), href: '/biomarkers', icon: ChartBarIcon, pro: true },
-    { name: t('sidebar.articles'), href: '/articles', icon: BookOpenIcon, pro: true },
-    { name: t('sidebar.profile'), href: '/profile', icon: UserCircleIcon, pro: false },
-  ];
+  const navigation = useMemo(() => {
+    const baseNav = [
+        { name: t('sidebar.dashboard'), href: '/dashboard', icon: HomeIcon, pro: true },
+        { name: t('sidebar.bloodAnalysis'), href: '/blood-test', icon: DocumentTextIcon, pro: true },
+        { name: t('sidebar.mindfulMoments'), href: '/mindful-moments', icon: MoonIcon, pro: true },
+        { name: t('sidebar.aiAssistant'), href: '/assistant', icon: SparklesIcon, pro: false },
+        { name: t('sidebar.specialists'), href: '/specialists', icon: UserGroupIcon, pro: false },
+        { name: t('sidebar.biomarkers'), href: '/biomarkers', icon: ChartBarIcon, pro: true },
+        { name: t('sidebar.articles'), href: '/articles', icon: BookOpenIcon, pro: true },
+        { name: t('sidebar.contentManagement'), href: '/content-management', icon: Cog6ToothIcon, pro: true, adminOnly: true },
+        { name: t('sidebar.profile'), href: '/profile', icon: UserCircleIcon, pro: false },
+    ];
+    return baseNav.filter(item => !item.adminOnly || isAdmin);
+  }, [isAdmin, t]);
+
 
   const handleLogout = () => {
     logout();
@@ -91,22 +97,32 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setIsSidebarOpen, forc
             aria-hidden="true"
         />
 
-        <aside className={`fixed top-0 left-0 h-full bg-surface/80 backdrop-blur-lg flex flex-col z-30 transition-all duration-300 ease-in-out border-r border-gray-200/80 overflow-hidden w-64
+        <aside className={`fixed top-0 left-0 h-full bg-surface/80 backdrop-blur-lg flex flex-col z-30 transition-all duration-300 ease-in-out border-r border-gray-200/80 overflow-y-auto
             ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
             md:translate-x-0 
             md:${isSidebarOpen ? 'w-64' : (forceHidden ? 'w-0 border-none' : 'w-20')}
         `}>
+            {!forceHidden && (
+              <button
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className="hidden md:flex items-center justify-center absolute top-6 left-full -translate-x-1/2 z-40 bg-surface h-7 w-7 rounded-full border border-gray-200/60 shadow-soft hover:bg-gray-100 transition-all"
+                aria-label="Toggle sidebar"
+              >
+                <ChevronRightIcon className={`h-5 w-5 text-on-surface-variant transition-transform duration-300 ${isSidebarOpen ? 'rotate-180' : ''}`} />
+              </button>
+            )}
+
             <div className="h-20 flex items-center justify-center px-4">
-                 <div className={`transition-all duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`}>
-                    <div className="flex items-center justify-center">
-                        <img src="https://www.everlivhealth.online/assets/logo_1756364617629-BwNFO1aW.png" alt="Everliv Health Logo" className="h-8 w-8 mr-2" />
+                <div className="flex items-center justify-center">
+                    <img src="https://www.everlivhealth.online/assets/logo_1756364617629-BwNFO1aW.png" alt="Everliv Health Logo" className="h-8 w-8 flex-shrink-0" />
+                    <div className={`flex flex-col items-start transition-all duration-300 ease-in-out overflow-hidden ${isSidebarOpen ? 'w-auto ml-2 opacity-100' : 'w-0 ml-0 opacity-0'}`}>
                         <h1 className="text-2xl font-extrabold text-primary tracking-tight whitespace-nowrap">
                             EVERLIV
                         </h1>
+                        <p className="text-xs text-on-surface-variant mt-1 text-left whitespace-nowrap">
+                            {t('header.subtitle')}
+                        </p>
                     </div>
-                    <p className="text-xs text-on-surface-variant mt-1 text-center whitespace-nowrap">
-                        {t('header.subtitle')}
-                    </p>
                 </div>
             </div>
             <nav className="flex-1 px-3 py-4 space-y-2">

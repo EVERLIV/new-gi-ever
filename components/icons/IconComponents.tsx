@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 // Props for all icon components
@@ -99,12 +98,6 @@ export const ExclamationTriangleIcon: React.FC<IconProps> = (props) => (
     </svg>
 );
 
-export const PaperAirplaneIcon: React.FC<IconProps> = (props) => (
-    <svg {...defaultProps} {...props}>
-        <path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>
-    </svg>
-);
-
 export const UserCircleIcon: React.FC<IconProps> = (props) => (
     <svg {...defaultProps} {...props}>
         <circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/>
@@ -162,6 +155,13 @@ export const TrashIcon: React.FC<IconProps> = (props) => (
 export const PlusCircleIcon: React.FC<IconProps> = (props) => (
     <svg {...defaultProps} {...props}>
         <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+    </svg>
+);
+
+// FIX: Add missing PencilIcon component
+export const PencilIcon: React.FC<IconProps> = (props) => (
+    <svg {...defaultProps} {...props}>
+        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
     </svg>
 );
 
@@ -313,5 +313,60 @@ export const GoogleIcon: React.FC<IconProps> = (props) => (
             fill="#EA4335"
             d="M24 10.75c3.23 0 6.13 1.11 8.41 3.29l6.31-6.31A23.8 23.8 0 0024 2 23.9 23.9 0 004.34 14.12l7.35 5.7c1.73-5.2 6.58-9.07 12.31-9.07z"
         ></path>
+    </svg>
+);
+
+export const PlusIcon: React.FC<IconProps> = (props) => (
+    <svg {...defaultProps} {...props}>
+        <line x1="12" y1="5" x2="12" y2="19"/>
+        <line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+);
+
+export const AdjustmentsHorizontalIcon: React.FC<IconProps> = (props) => (
+    <svg {...defaultProps} {...props}>
+        <path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><line x1="2" y1="14" x2="6" y2="14"/><line x1="10" y1="8" x2="14" y2="8"/><line x1="18" y1="16" x2="22" y2="16"/>
+    </svg>
+);
+
+export const ArrowUpIcon: React.FC<IconProps> = (props) => (
+    <svg {...defaultProps} {...props}>
+        <line x1="12" y1="19" x2="12" y2="5"/>
+        <polyline points="5 12 12 5 19 12"/>
+    </svg>
+);
+
+export const PaperAirplaneIcon: React.FC<IconProps> = (props) => (
+    <svg {...defaultProps} {...props}>
+        <g transform="rotate(-45 12 12)">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+        </g>
+    </svg>
+);
+
+export const UserGroupIcon: React.FC<IconProps> = (props) => (
+    <svg {...defaultProps} {...props}>
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+);
+
+export const NoSymbolIcon: React.FC<IconProps> = (props) => (
+    <svg {...defaultProps} {...props}>
+      <circle cx="12" cy="12" r="10" />
+      <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+    </svg>
+);
+
+export const EyeIcon: React.FC<IconProps> = (props) => (
+    <svg {...defaultProps} {...props}>
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+        <circle cx="12" cy="12" r="3" />
+    </svg>
+);
+
+export const EyeSlashIcon: React.FC<IconProps> = (props) => (
+    <svg {...defaultProps} {...props}>
+        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07l-5.52 5.52" />
+        <line x1="1" y1="1" x2="23" y2="23" />
     </svg>
 );

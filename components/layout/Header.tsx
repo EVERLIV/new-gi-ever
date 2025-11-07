@@ -30,23 +30,12 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, isAssistantPage = false 
         ) : (
             <button 
                 onClick={toggleSidebar} 
-                className={`mr-4 text-on-surface-variant hover:text-on-surface ${!isAssistantPage && 'hidden md:block'}`}
+                className="mr-4 text-on-surface-variant hover:text-on-surface md:hidden"
                 aria-label="Toggle sidebar"
             >
                 <Bars3Icon className="h-6 w-6" />
             </button>
         )}
-        <div className="flex items-center">
-            <img src="https://www.everlivhealth.online/assets/logo_1756364617629-BwNFO1aW.png" alt="Everliv Health Logo" className="h-8 w-auto mr-3" />
-            <div>
-                <h1 className="text-2xl font-extrabold text-primary tracking-tight">
-                    EVERLIV
-                </h1>
-                <p className="text-xs text-on-surface-variant mt-0.5">
-                    {t('header.subtitle')}
-                </p>
-            </div>
-        </div>
       </div>
     </header>
   );

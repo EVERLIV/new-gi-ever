@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useCallback, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { BloodTestAnalysis } from '../types';
 import { analyzeBloodTest } from '../services/geminiService';
@@ -35,6 +35,7 @@ const FileUploader: React.FC<{ onFileSelect: (file: File) => void; selectedFile:
 
 const BloodTestPage: React.FC = () => {
   const { t } = useTranslation();
+  const location = useLocation();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [customBiomarkers, setCustomBiomarkers] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -43,15 +44,25 @@ const BloodTestPage: React.FC = () => {
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleFileSelect = (file: File) => {
+  const handleFileSelect = useCallback((file: File) => {
     if (file) {
       setError(null);
       setAnalysis(null);
       setIsSaved(false);
       setSelectedFile(file);
     }
-  };
+  }, []);
   
+  // Handle file passed from PWA share/file handling
+  useEffect(() => {
+    const sharedFile = location.state?.sharedFile;
+    if (sharedFile instanceof File) {
+      handleFileSelect(sharedFile);
+      // Clear the state to prevent re-processing on navigation
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, handleFileSelect]);
+
   const handleStartOver = () => {
     setAnalysis(null);
     setSelectedFile(null);

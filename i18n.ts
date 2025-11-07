@@ -1,20 +1,9 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import ru from './locales/ru.json' assert { type: 'json' };
 
+// Initialization with resources will now happen asynchronously in index.tsx
+// to avoid using import assertions which may not be supported in all environments.
 i18n
-  .use(initReactI18next)
-  .init({
-    resources: {
-      ru: {
-        translation: ru,
-      },
-    },
-    lng: 'ru',
-    fallbackLng: 'ru',
-    interpolation: {
-      escapeValue: false, // react already safes from xss
-    },
-  });
+  .use(initReactI18next);
 
 export default i18n;

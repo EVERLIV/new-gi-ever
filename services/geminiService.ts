@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Chat, Modality } from "@google/genai";
-import type { BloodTestAnalysis, Biomarker, AIGeneratedRecommendations, User } from '../types';
+import type { BloodTestAnalysis, Biomarker, AIGeneratedRecommendations, User, ActionPlan } from '../types';
 
 if (!process.env.API_KEY) {
   throw new Error("API_KEY environment variable is not set");
@@ -175,6 +175,78 @@ export const generateMeditationAudio = async (script: string): Promise<string> =
     } catch (error) {
         console.error("Ошибка при генерации аудио для медитации:", error);
         throw new Error("Не удалось сгенерировать аудио для медитации. Пожалуйста, попробуйте позже.");
+    }
+};
+
+const actionPlanSchema = {
+    type: Type.OBJECT,
+    properties: {
+        nutrition: {
+            type: Type.ARRAY,
+            description: "Список из 2-4 действенных и комплексных рекомендаций по питанию, учитывая цели и биомаркеры пользователя.",
+            items: { type: Type.STRING }
+        },
+        lifestyle: {
+            type: Type.ARRAY,
+            description: "Список из 2-3 рекомендаций по образу жизни (физическая активность, сон, управление стрессом), адаптированных под профиль пользователя.",
+            items: { type: Type.STRING }
+        },
+        monitoring: {
+            type: Type.ARRAY,
+            description: "Список из 1-2 рекомендаций по дальнейшему мониторингу здоровья, включая советы по следующим анализам.",
+            items: { type: Type.STRING }
+        }
+    },
+    required: ["nutrition", "lifestyle", "monitoring"]
+};
+
+
+export const generateDashboardActionPlan = async (user: User, biomarkers: Biomarker[], latestTestSummary: string): Promise<ActionPlan> => {
+    const userProfileContext = user.healthProfile ? `
+        Возраст: ${user.healthProfile.age}, Пол: ${user.healthProfile.sex}.
+        Рост: ${user.healthProfile.height} см, Вес: ${user.healthProfile.weight} кг.
+        Уровень активности: ${user.healthProfile.activityLevel}.
+        Цели в области здоровья: ${user.healthProfile.healthGoals.join(', ')}.
+        Известные заболевания: ${user.healthProfile.chronicConditions || 'Не указаны'}.
+    ` : 'Профиль здоровья пользователя не заполнен.';
+
+    const relevantBiomarkers = biomarkers
+        .filter(b => b.status !== 'normal')
+        .map(b => `- ${b.name}: ${b.value} ${b.unit} (Статус: ${b.status})`)
+        .join('\n');
+
+    const prompt = `
+        Вы — ИИ-консультант по здоровью для приложения EVERLIV HEALTH, действующий как заботливый и знающий врач. Ваша задача — создать комплексный, целостный и действенный план здоровья для панели управления пользователя.
+
+        ВАЖНО: Вы не являетесь медицинским работником. НЕ ставьте медицинских диагнозов, не назначайте лечение или рецепты. Ваши советы должны быть общими, безопасными и сосредоточенными на образе жизни, питании и физических упражнениях. Всегда рекомендуйте проконсультироваться с медицинским работником для получения персональных медицинских советов.
+
+        Проанализируйте ВСЮ предоставленную информацию:
+        1.  **Профиль здоровья пользователя:**
+            ${userProfileContext}
+        2.  **Биомаркеры, требующие внимания:**
+            ${relevantBiomarkers.length > 0 ? relevantBiomarkers : 'Все биомаркеры в настоящее время в норме.'}
+        3.  **Резюме последнего анализа крови:**
+            "${latestTestSummary}"
+
+        Основываясь на этих данных, создайте персонализированный план действий в формате JSON. План должен напрямую затрагивать цели пользователя и его биомаркеры, выходящие за пределы нормы. Предоставляйте конкретные, действенные шаги. Поддерживайте поддерживающий и профессиональный тон.
+        Ваш ответ ДОЛЖЕН быть полностью на РУССКОМ языке и соответствовать предоставленной JSON-схеме.
+    `;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: actionPlanSchema,
+            },
+        });
+        const jsonString = response.text;
+        const parsedResult = JSON.parse(jsonString);
+        return parsedResult as ActionPlan;
+    } catch (error) {
+        console.error("Ошибка при генерации плана действий для панели управления:", error);
+        throw new Error("Не удалось сгенерировать план действий.");
     }
 };
 

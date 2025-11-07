@@ -1,5 +1,11 @@
 // types.ts
 
+export interface ActionPlan {
+  nutrition: string[];
+  lifestyle: string[];
+  monitoring: string[];
+}
+
 export interface HealthProfile {
   age: number | '';
   sex: 'male' | 'female' | 'other' | '';
@@ -75,4 +81,26 @@ export interface ChatMessage {
   sender: MessageSender;
   text: string;
   image?: string; // Optional: for displaying uploaded images (e.g., base64 or blob URL)
+}
+
+export interface Article {
+  id: string;
+  category: string;
+  title: string;
+  summary: string;
+  imageUrl: string;
+  author: string;
+  authorAvatar: string;
+  publishedDate: string; // ISO date string
+  content: string; // HTML or Markdown
+}
+
+export interface Meditation {
+    id: string;
+    title: string;
+    duration: string;
+    summary: string;
+    category: 'Фокус' | 'Релакс' | 'Сон' | 'Утро' | string;
+    imageUrl: string;
+    script: string;
 }

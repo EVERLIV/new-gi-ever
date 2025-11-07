@@ -19,7 +19,7 @@ const ProFeature: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) => {
-  const { upgradeToPro } = useAuth();
+  const { upgradeToPro, isUpgrading } = useAuth();
   const { t } = useTranslation();
 
   if (!isOpen) {
@@ -28,7 +28,6 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) => {
 
   const handleUpgrade = () => {
     upgradeToPro();
-    onClose();
   };
 
   return createPortal(
@@ -73,8 +72,12 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) => {
             </ul>
 
             <div className="mt-8">
-                <Button onClick={handleUpgrade} className="w-full py-3 text-base font-bold">
-                    {t('upgradeModal.upgradeButton')}
+                <Button 
+                    onClick={handleUpgrade} 
+                    className="w-full py-3 text-base font-bold"
+                    isLoading={isUpgrading}
+                >
+                    {isUpgrading ? t('common.saving') : t('upgradeModal.upgradeButton')}
                 </Button>
             </div>
         </Card>
